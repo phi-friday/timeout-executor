@@ -35,6 +35,7 @@ jobs:
 
       - name: Build package
         run: |
+          VERSION=$(dunamai from any --no-metadata --style pep440)
           poetry version $VERSION
           poetry build
 
