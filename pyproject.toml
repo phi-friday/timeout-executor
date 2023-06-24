@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "timeout-executor"
-version = "0.1.0"
+version = "0.0.0" # will be replaced
 description = "execute with timeout"
 authors = ["phi <phi.friday@gmail.com>"]
 readme = "README.md"
