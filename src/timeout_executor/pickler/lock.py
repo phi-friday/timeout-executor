@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from threading import Lock
+from threading import RLock
 
 __all__ = ["patch_lock"]
 
-patch_lock = Lock()
+patch_lock = RLock()

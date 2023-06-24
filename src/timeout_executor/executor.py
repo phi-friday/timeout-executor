@@ -22,6 +22,8 @@ from timeout_executor.log import logger
 from timeout_executor.pickler import monkey_patch, monkey_unpatch
 
 if TYPE_CHECKING:
+    from threading import RLock
+
     from anyio.abc import ObjectSendStream
 
     from .concurrent.futures import _billiard as billiard_future
@@ -56,6 +58,13 @@ class TimeoutExecutor:
         self._args = ()
         self._kwargs = {}
         self._select = (context, pickler)
+
+    @property
+    def lock(self) -> RLock:
+        """patch lock"""
+        from timeout_executor.pickler.lock import patch_lock
+
+        return patch_lock
 
     def _partial_init(self) -> Callable[[], Any] | None:
         if self._init is None:

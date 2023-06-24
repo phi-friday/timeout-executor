@@ -108,25 +108,26 @@ class TestExecutorAsync:
 
         send, recv = anyio.create_memory_object_stream()
         result = deque()
-        async with anyio.create_task_group() as task_group:
-            async with send:
-                task_group.start_soon(
-                    send_result,
-                    send.clone(),
-                    executor.apply_async,
-                    partial(sample_async_func, y=y),
-                    x,
-                )
-                task_group.start_soon(
-                    send_result,
-                    send.clone(),
-                    executor.apply_async,
-                    partial(sample_async_func, x=x),
-                    y,
-                )
-            async with recv:
-                async for value in recv:
-                    result.append(value)
+        with executor.lock:
+            async with anyio.create_task_group() as task_group:
+                async with send:
+                    task_group.start_soon(
+                        send_result,
+                        send.clone(),
+                        executor.apply_async,
+                        partial(sample_async_func, y=y),
+                        x,
+                    )
+                    task_group.start_soon(
+                        send_result,
+                        send.clone(),
+                        executor.apply_async,
+                        partial(sample_async_func, x=x),
+                        y,
+                    )
+                async with recv:
+                    async for value in recv:
+                        result.append(value)
 
         assert len(result) == 2
         for value in result:
