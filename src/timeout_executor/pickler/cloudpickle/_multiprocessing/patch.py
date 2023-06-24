@@ -14,7 +14,7 @@ def monkey_patch() -> None:
     with patch_lock:
         from multiprocessing import connection, queues, reduction, sharedctypes
 
-        from timeout_executor.pickler.dill.base import ForkingPickler
+        from timeout_executor.pickler.cloudpickle.base import ForkingPickler
 
         global origin  # noqa: PLW0603
         if origin is not None:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import importlib
+import logging
 import sys
 from concurrent.futures import wait
 from functools import partial
@@ -40,6 +41,10 @@ IPYTHON_SHELL_NAMES = frozenset(
         "TerminalInteractiveShell",
     },
 )
+logger = logging.getLogger("timeout_executor")
+
+ContextType = Literal["billiard", "multiprocessing"]
+PicklerType = Literal["pickle", "dill", "cloudpickle"]
 
 
 class TimeoutExecutor:
@@ -48,8 +53,8 @@ class TimeoutExecutor:
     def __init__(
         self,
         timeout: float,
-        context: Literal["billiard", "multiprocessing"] | None = None,
-        pickler: Literal["pickle", "dill"] | None = None,
+        context: ContextType | None = None,
+        pickler: PicklerType | None = None,
     ) -> None:
         self.timeout = timeout
         self._init = None
@@ -102,7 +107,7 @@ class TimeoutExecutor:
             future = pool.submit(func, *args, **kwargs)
             wait([future], timeout=self.timeout)
             if not future.done():
-                pool.shutdown(wait=False)
+                pool.shutdown(wait=False, cancel_futures=True)
                 error_msg = f"timeout > {self.timeout}s"
                 raise TimeoutError(error_msg)
             return future.result()
@@ -140,14 +145,14 @@ class TimeoutExecutor:
                 coro = asyncio.wrap_future(future)
                 return await coro
             except TimeoutError:
-                pool.shutdown(wait=False)
+                pool.shutdown(wait=False, cancel_futures=True)
                 raise
 
 
 @overload
 def get_executor(
     context: Literal["multiprocessing"] | None = ...,
-    pickler: Literal["pickle", "dill"] | None = ...,
+    pickler: PicklerType | None = ...,
 ) -> type[multiprocessing_future.ProcessPoolExecutor]:
     ...
 
@@ -155,14 +160,25 @@ def get_executor(
 @overload
 def get_executor(
     context: Literal["billiard"] = ...,
-    pickler: Literal["pickle", "dill"] | None = ...,
+    pickler: PicklerType | None = ...,
 ) -> type[billiard_future.ProcessPoolExecutor]:
     ...
 
 
+@overload
 def get_executor(
-    context: Literal["billiard", "multiprocessing"] | None = None,
-    pickler: Literal["pickle", "dill"] | None = None,
+    context: str = ...,
+    pickler: PicklerType | None = ...,
+) -> (
+    type[billiard_future.ProcessPoolExecutor]
+    | type[multiprocessing_future.ProcessPoolExecutor]
+):
+    ...
+
+
+def get_executor(
+    context: ContextType | str | None = None,
+    pickler: PicklerType | None = None,
 ) -> (
     type[billiard_future.ProcessPoolExecutor]
     | type[multiprocessing_future.ProcessPoolExecutor]
@@ -175,26 +191,68 @@ def get_executor(
     Returns:
         ProcessPoolExecutor
     """
-    if not context:
-        context = "billiard" if _is_jupyter() and _has_billiard() else "multiprocessing"
-    if not pickler:
-        pickler = "dill" if _has_dill() else "pickle"
-
+    context, pickler = _validate_context_and_pickler(context, pickler)
     future_module = importlib.import_module(
         f".concurrent.futures._{context}",
         __package__,
     )
     executor = future_module.ProcessPoolExecutor
+    pickler_module = importlib.import_module(".pickler.dill", __package__)
+    _patch_or_unpatch(context, pickler, pickler_module)
 
-    if pickler != "pickle":
-        pickler_module = importlib.import_module(".pickler.dill", __package__)
+    return executor
+
+
+def _validate_context_and_pickler(
+    context: Any,
+    pickler: Any,
+) -> tuple[ContextType, PicklerType]:
+    if not context:
+        context = "billiard" if _is_jupyter() and _has_billiard() else "multiprocessing"
+    if not pickler:
+        if _has_dill():
+            pickler = "dill"
+        elif _has_cloudpickle():
+            pickler = "cloudpickle"
+        else:
+            pickler = "pickle"
+
+    if context == "billiard" and pickler == "pickle":
+        if _has_dill():
+            logger.warning("billiard will use dill")
+            pickler = "dill"
+        elif _has_cloudpickle():
+            logger.warning("billiard will use cloudpickle")
+            pickler = "cloudpickle"
+        else:
+            raise ModuleNotFoundError("Billiard needs dill or cloudpickle")
+
+    return context, pickler
+
+
+def _patch_or_unpatch(
+    context: ContextType,
+    pickler: PicklerType,
+    pickler_module: ModuleType,
+) -> None:
+    if pickler == "pickle":
+        if context == "billiard" and _has_billiard():
+            from timeout_executor.pickler.dill._billiard import monkey_unpatch
+
+            logger.info("unpatch: billiard")
+            monkey_unpatch()
+        if context == "multiprocessing":
+            from timeout_executor.pickler.dill._multiprocessing import monkey_unpatch
+
+            logger.info("unpatch: multiprocessing")
+            monkey_unpatch()
+    else:
         context_module: ModuleType | None = getattr(pickler_module, context, None)
         if context_module is None:
             error_msg = f"{pickler} not yet implemented"
             raise NotImplementedError(error_msg)
+        logger.info("patch: %s", pickler)
         context_module.monkey_patch()
-
-    return executor
 
 
 def _async_run(
@@ -271,6 +329,15 @@ def _is_jupyter_from_shell(shell: Any) -> bool:
 def _has_dill() -> bool:
     try:
         import dill  # type: ignore # noqa: F401
+    except (ImportError, ModuleNotFoundError):
+        return False
+    else:
+        return True
+
+
+def _has_cloudpickle() -> bool:
+    try:
+        import cloudpickle  # type: ignore # noqa: F401
     except (ImportError, ModuleNotFoundError):
         return False
     else:

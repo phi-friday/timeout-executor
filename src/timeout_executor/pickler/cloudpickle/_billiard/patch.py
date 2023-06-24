@@ -12,7 +12,7 @@ def monkey_patch() -> None:
     from timeout_executor.pickler.lock import patch_lock
 
     with patch_lock:
-        from timeout_executor.pickler.dill.base import ForkingPickler
+        from timeout_executor.pickler.cloudpickle.base import ForkingPickler
 
         try:
             from billiard import (  # type: ignore
