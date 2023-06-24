@@ -5,6 +5,8 @@ description = "execute with timeout"
 authors = ["phi <phi.friday@gmail.com>"]
 readme = "README.md"
 license = "MIT License"
+homepage = "https://github.com/phi-friday/timeout-executor"
+repository = "https://github.com/phi-friday/timeout-executor"
 packages = [{ include = "timeout_executor", from = "src" }]
 
 [tool.poetry.dependencies]
