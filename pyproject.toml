@@ -8,7 +8,7 @@ license = "MIT License"
 packages = [{ include = "timeout_executor", from = "src" }]
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.12"
+python = ">=3.8"
 anyio = ">=3.7.0"
 typing-extensions = ">=4.6.3"
 billiard = { version = ">=4.0.0", optional = true }

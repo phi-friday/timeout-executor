@@ -1,0 +1,43 @@
+name: lint & test
+
+on:
+  push:
+    branches: [dev]
+  pull_request:
+    branches: [dev]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.11"]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install poetry
+        run: |
+          pipx install poetry
+          poetry config installer.modern-installation false
+          poetry config virtualenvs.in-project true
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: poetry
+          cache-dependency-path: |
+            **/poetry.lock
+
+      - name: Install dependencies
+        run: |
+          poetry install --all-extras --with=dev
+
+      - name: Code checks
+        run: |
+          poetry run pre-commit run --all-files --show-diff-on-failure
+
+      - name: Test with pytest
+        run: |
+          poetry run pytest
