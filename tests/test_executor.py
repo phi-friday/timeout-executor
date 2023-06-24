@@ -11,6 +11,7 @@ from typing import Any, Callable, Literal
 import anyio
 import pytest
 from anyio.abc import ObjectSendStream
+
 from timeout_executor import TimeoutExecutor
 
 TEST_SIZE = 3
