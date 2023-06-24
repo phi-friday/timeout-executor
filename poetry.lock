@@ -1217,4 +1217,4 @@ dill = ["dill"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<3.12"
-content-hash = "e31fe06e86df67b9545d01dfe7d8421884065f909fdaf84a920cd250c107fbbf"
+content-hash = "bcfeedd401bcedbb65bb7d66fd43bd806359b3c60b4330644efed287605ba93b"
