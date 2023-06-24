@@ -1,0 +1,98 @@
+[tool.poetry]
+name = "timeout-executor"
+version = "0.1.0"
+description = ""
+authors = ["phi <phi.friday@gmail.com>"]
+readme = "README.md"
+packages = [{ include = "timeout_executor", from = "src" }]
+
+[tool.poetry.dependencies]
+python = ">=3.8,<3.12"
+billiard = { version = "^4.1.0", optional = true }
+dill = { version = "^0.3.6", optional = true }
+anyio = "^3.7.0"
+
+[tool.poetry.extras]
+billiard = ['billiard']
+dill = ['dill']
+
+[tool.poetry.group.dev.dependencies]
+ruff = "0.0.275"
+black = "23.3.0"
+ipykernel = "^6.23.3"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+target-version = "py38"
+select = ["ALL"]
+fixable = [
+    "UP",
+    'F401',   # unused imports
+    "F522",   # string-dot-format-extra-named-arguments
+    "F541",   # f-string-missing-placeholders
+    "W292",   # no-new-line-at-end-of-file
+    "E711",   # none-comparison
+    "E712",   # true-false-comparison
+    "E713",   # not-in-test
+    "E714",   # not-is-test
+    "I001",   # unsorted-imports
+    "COM812", # trailing-comma-missing
+    "Q000",   # bad-quotes-inline-string
+    "Q001",   # bad-quotes-multiline-string
+    "UP037",  # quoted-annotation
+    "W293",   # blank-line-with-whitespace
+    "RSE102", # unnecessary-paren-on-raise-exception
+    "SIM108", # if-else-block-instead-of-if-exp
+    "I002",   #	missing-required-import	
+    "RUF100", # unused-noqa
+]
+ignore = [
+    'TD',     # flake8-todos
+    'E712',   # TrueFalseComparison # sqlalchemy
+    "E711",   # none-comparison # sqlalchemy
+    "D100",   # public-module
+    "D104",   # public-package
+    "D107",   # public-init
+    "D201",   # no-blank-line-before-function
+    "D202",   # no-blank-line-after-function
+    "D203",   # one-blank-line-before-class
+    "D204",   # one-blank-line-after-class
+    "D211",   # no-blank-line-before-class
+    "D212",   # multi-line-summary-first-line
+    "D213",   # multi-line-summary-second-line
+    "D400",   # ends-in-period
+    "D401",   # non-imperative-mood
+    "D403",   # first-line-capitalized
+    "D406",   # new-line-after-section-name
+    "D407",   # dashed-underline-after-section
+    "D417",   # undocumented-param
+    "D415",   # ends-in-punctuation
+    "EM101",  # raw-string-in-exception
+    "TRY003", # raise-vanilla-args
+    "ANN101", # missing-type-self
+    "ANN102", # missing-type-cls
+    "ANN401", # dynamically-typed-expression
+    "FBT002", # boolean-default-value-in-function-definition
+    "PGH003", # blanket-type-ignore
+    "SIM117", # multiple-with-statements # python3.8
+    "B905",   # zip-without-explicit-strict
+    "PD010",  # use-of-dot-pivot-or-unstack
+    "D105",   # undocumented-magic-method
+    "TD",     # flake8-todos
+    "FIX",    # flake8-fixme
+    "D101",   # "undocumented-public-class"
+]
+
+[tool.ruff.isort]
+known-local-folder = ["django_dset_loader"]
+required-imports = ["from __future__ import annotations"]
+
+[tool.pyright]
+venvPath = "."
+venv = '.venv'
+pythonVersion = '3.8'
+pythonPlatform = 'Linux'
+diagnostic = 'basic'
