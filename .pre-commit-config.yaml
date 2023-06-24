@@ -1,0 +1,21 @@
+repos:
+  - hooks:
+      - id: ruff
+        name: ruff
+    repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: v0.0.275
+
+  - hooks:
+      - id: black
+        args:
+          - "--check"
+    rev: 23.3.0
+    repo: https://github.com/psf/black
+
+  - hooks:
+      - id: pyright
+        entry: pyright
+        pass_filenames: false
+        types: [python]
+    repo: https://github.com/RobertCraigie/pyright-python
+    rev: v1.1.315
