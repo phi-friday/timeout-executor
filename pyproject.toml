@@ -1,13 +1,16 @@
 [tool.poetry]
 name = "timeout-executor"
-version = "0.0.0"                                             # will be replaced
+version = "0.0.0" # will be replaced
 description = "execute with timeout"
 authors = ["phi <phi.friday@gmail.com>"]
 readme = "README.md"
 license = "MIT License"
 homepage = "https://github.com/phi-friday/timeout-executor"
 repository = "https://github.com/phi-friday/timeout-executor"
-packages = [{ include = "timeout_executor", from = "src" }]
+packages = [
+    { include = "timeout_executor", from = "src" },
+    { include = "pyproject.toml" },
+]
 
 [tool.poetry.dependencies]
 python = ">=3.8"
