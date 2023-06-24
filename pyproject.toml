@@ -1,9 +1,10 @@
 [tool.poetry]
 name = "timeout-executor"
 version = "0.1.0"
-description = ""
+description = "execute with timeout"
 authors = ["phi <phi.friday@gmail.com>"]
 readme = "README.md"
+license = "MIT License"
 packages = [{ include = "timeout_executor", from = "src" }]
 
 [tool.poetry.dependencies]
