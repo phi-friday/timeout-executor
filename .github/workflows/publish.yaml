@@ -43,6 +43,7 @@ jobs:
           cat src/timeout_executor/__init__.py | \
             sed "s/\"0.0.0\"/\"$VERSION\"/g" > \
             src/timeout_executor/__init__.py
+          echo "VERSION=$VERSION" >> $GUTHUB_ENV
 
       - name: Build package
         run: |
