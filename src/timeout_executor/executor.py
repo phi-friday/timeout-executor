@@ -5,7 +5,7 @@ import importlib
 import logging
 import sys
 from concurrent.futures import wait
-from functools import partial
+from functools import lru_cache, partial
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -24,12 +24,8 @@ if TYPE_CHECKING:
 
     from anyio.abc import ObjectSendStream
 
-    from .concurrent.futures import (
-        _billiard as billiard_future,
-    )
-    from .concurrent.futures import (
-        _multiprocessing as multiprocessing_future,
-    )
+    from .concurrent.futures import _billiard as billiard_future
+    from .concurrent.futures import _multiprocessing as multiprocessing_future
 
 __all__ = ["TimeoutExecutor", "get_executor"]
 
@@ -208,20 +204,24 @@ def _validate_context_and_pickler(
     pickler: Any,
 ) -> tuple[ContextType, PicklerType]:
     if not context:
-        context = "billiard" if _is_jupyter() and _has_billiard() else "multiprocessing"
+        context = (
+            "billiard"
+            if _is_jupyter() and _check_deps("billiard")
+            else "multiprocessing"
+        )
     if not pickler:
-        if _has_dill():
+        if _check_deps("dill"):
             pickler = "dill"
-        elif _has_cloudpickle():
+        elif _check_deps("cloudpickle"):
             pickler = "cloudpickle"
         else:
             pickler = "pickle"
 
     if context == "billiard" and pickler == "pickle":
-        if _has_dill():
+        if _check_deps("dill"):
             logger.warning("billiard will use dill")
             pickler = "dill"
-        elif _has_cloudpickle():
+        elif _check_deps("cloudpickle"):
             logger.warning("billiard will use cloudpickle")
             pickler = "cloudpickle"
         else:
@@ -236,7 +236,7 @@ def _patch_or_unpatch(
     pickler_module: ModuleType,
 ) -> None:
     if pickler == "pickle":
-        if context == "billiard" and _has_billiard():
+        if context == "billiard" and _check_deps("billiard"):
             from timeout_executor.pickler.dill._billiard import monkey_unpatch
 
             logger.info("unpatch: billiard")
@@ -326,27 +326,10 @@ def _is_jupyter_from_shell(shell: Any) -> bool:
     return shell_name in IPYTHON_SHELL_NAMES
 
 
-def _has_dill() -> bool:
+@lru_cache
+def _check_deps(module_name: str) -> bool:
     try:
-        import dill  # type: ignore # noqa: F401
-    except (ImportError, ModuleNotFoundError):
-        return False
-    else:
-        return True
-
-
-def _has_cloudpickle() -> bool:
-    try:
-        import cloudpickle  # type: ignore # noqa: F401
-    except (ImportError, ModuleNotFoundError):
-        return False
-    else:
-        return True
-
-
-def _has_billiard() -> bool:
-    try:
-        import billiard  # type: ignore # noqa: F401
+        importlib.import_module(module_name)
     except (ImportError, ModuleNotFoundError):
         return False
     else:
