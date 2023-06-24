@@ -42,7 +42,7 @@ jobs:
           VERSION=$(dunamai from any --no-metadata --style pep440)
           poetry version $VERSION
           cat src/timeout_executor/__init__.py | \
-            sed "s/\"0.0.0\"/\"$VERSION\"/g" > \
+            sed "s/\"0\.0\.0\"/\"$VERSION\"/g" > \
             src/timeout_executor/__init__.py
 
       - name: Build package
