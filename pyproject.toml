@@ -13,6 +13,7 @@ dill = { version = "^0.3.6", optional = true }
 anyio = "^3.7.0"
 
 [tool.poetry.extras]
+all = ['billiard', 'dill']
 billiard = ['billiard']
 dill = ['dill']
 

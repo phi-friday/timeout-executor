@@ -176,9 +176,9 @@ def get_executor(
         ProcessPoolExecutor
     """
     if not context:
-        context = "billiard" if _is_jupyter() else "multiprocessing"
+        context = "billiard" if _is_jupyter() and _has_billiard() else "multiprocessing"
     if not pickler:
-        pickler = "dill" if _has_dill else "pickle"
+        pickler = "dill" if _has_dill() else "pickle"
 
     future_module = importlib.import_module(
         f".concurrent.futures._{context}",
@@ -271,6 +271,15 @@ def _is_jupyter_from_shell(shell: Any) -> bool:
 def _has_dill() -> bool:
     try:
         import dill  # type: ignore # noqa: F401
+    except (ImportError, ModuleNotFoundError):
+        return False
+    else:
+        return True
+
+
+def _has_billiard() -> bool:
+    try:
+        import billiard  # type: ignore # noqa: F401
     except (ImportError, ModuleNotFoundError):
         return False
     else:

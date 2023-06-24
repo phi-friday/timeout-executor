@@ -5,7 +5,7 @@ import io
 from typing import Any, Callable, ClassVar, TypeVar
 
 try:
-    import dill
+    import dill  # type: ignore
 except (ImportError, ModuleNotFoundError) as exc:
     raise ImportError("install extra first: dill") from exc
 
