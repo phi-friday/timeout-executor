@@ -37,6 +37,8 @@ jobs:
         run: |
           VERSION=$(dunamai from any --no-metadata --style pep440)
           poetry version $VERSION
+          echo "from __future__ import annotations\n\n__version__: str = \"$VERSION\"" > \
+            expression/_version.py
           poetry build
 
       - name: Release to PyPI
