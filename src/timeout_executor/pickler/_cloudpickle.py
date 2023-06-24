@@ -11,10 +11,10 @@ except (ImportError, ModuleNotFoundError) as exc:
 
 ValueT = TypeVar("ValueT")
 
-__all__ = ["ForkingPickler"]
+__all__ = ["Pickler"]
 
 
-class ForkingPickler(cloudpickle.Pickler):
+class Pickler(cloudpickle.Pickler):
     _extra_reducers: ClassVar[dict[type[Any], Callable[[Any], Any]]] = {}
     _copyreg_dispatch_table = copyreg.dispatch_table
 
@@ -33,7 +33,7 @@ class ForkingPickler(cloudpickle.Pickler):
         cls._extra_reducers[type] = reduce
 
     @classmethod
-    def dumps(  # noqa: D102
+    def dumps(
         cls,
         obj: Any,
         protocol: int | None = None,
@@ -43,7 +43,7 @@ class ForkingPickler(cloudpickle.Pickler):
         return buf.getbuffer()
 
     @classmethod
-    def loadbuf(  # noqa: D102
+    def loadbuf(
         cls,
         buf: io.BytesIO,
         protocol: int | None = None,  # noqa: ARG003

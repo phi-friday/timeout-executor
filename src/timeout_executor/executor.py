@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import importlib
-import logging
 import sys
 from concurrent.futures import wait
 from functools import lru_cache, partial
@@ -19,9 +18,10 @@ from typing import (
 import anyio
 from typing_extensions import ParamSpec
 
-if TYPE_CHECKING:
-    from types import ModuleType
+from timeout_executor.log import logger
+from timeout_executor.pickler import monkey_patch, monkey_unpatch
 
+if TYPE_CHECKING:
     from anyio.abc import ObjectSendStream
 
     from .concurrent.futures import _billiard as billiard_future
@@ -37,7 +37,6 @@ IPYTHON_SHELL_NAMES = frozenset(
         "TerminalInteractiveShell",
     },
 )
-logger = logging.getLogger("timeout_executor")
 
 ContextType = Literal["billiard", "multiprocessing"]
 PicklerType = Literal["pickle", "dill", "cloudpickle"]
@@ -193,8 +192,7 @@ def get_executor(
         __package__,
     )
     executor = future_module.ProcessPoolExecutor
-    pickler_module = importlib.import_module(".pickler.dill", __package__)
-    _patch_or_unpatch(context, pickler, pickler_module)
+    _patch_or_unpatch(context, pickler)
 
     return executor
 
@@ -230,29 +228,11 @@ def _validate_context_and_pickler(
     return context, pickler
 
 
-def _patch_or_unpatch(
-    context: ContextType,
-    pickler: PicklerType,
-    pickler_module: ModuleType,
-) -> None:
+def _patch_or_unpatch(context: ContextType, pickler: PicklerType) -> None:
     if pickler == "pickle":
-        if context == "billiard" and _check_deps("billiard"):
-            from timeout_executor.pickler.dill._billiard import monkey_unpatch
-
-            logger.info("unpatch: billiard")
-            monkey_unpatch()
-        if context == "multiprocessing":
-            from timeout_executor.pickler.dill._multiprocessing import monkey_unpatch
-
-            logger.info("unpatch: multiprocessing")
-            monkey_unpatch()
+        monkey_unpatch(context)
     else:
-        context_module: ModuleType | None = getattr(pickler_module, context, None)
-        if context_module is None:
-            error_msg = f"{pickler} not yet implemented"
-            raise NotImplementedError(error_msg)
-        logger.info("patch: %s", pickler)
-        context_module.monkey_patch()
+        monkey_patch(context, pickler)
 
 
 def _async_run(

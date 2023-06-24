@@ -1,5 +1,5 @@
 from __future__ import annotations
 
-from . import dill
+from .main import monkey_patch, monkey_unpatch
 
-__all__ = ["dill"]
+__all__ = ["monkey_patch", "monkey_unpatch"]

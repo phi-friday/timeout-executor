@@ -231,6 +231,12 @@ class ProcessPoolExecutor(_base.Executor):
                 self._mp_context = mp_context
             elif max_tasks_per_child is not None:
                 self._mp_context = billiard.get_context("spawn")
+            elif (
+                sys.platform == "linux"
+                or sys.platform == "linux2"
+                or sys.platform == "darwin"
+            ):
+                self._mp_context = billiard.get_context("fork")
             else:
                 self._mp_context = billiard.get_context()
             mp_context = self._mp_context
