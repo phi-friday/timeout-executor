@@ -49,7 +49,7 @@ jobs:
       - name: Build package
         run: |
           poetry build
-          VERSION={{ steps.set_version.outputs.VERSION}}$
+          VERSION=${{ steps.set_version.outputs.VERSION}}
           PY_VERSION=$(echo "${{ matrix.python-version }}" | sed "s/\.//g")
           mv dist/timeout_executor-$VERSION-py3-none-any.whl dist/timeout_executor-$VERSION-py$PY_VERSION-none-any.whl
 
