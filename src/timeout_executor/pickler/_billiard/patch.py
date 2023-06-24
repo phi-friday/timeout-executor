@@ -2,14 +2,16 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable, Final
 
+from timeout_executor.readonly import ReadOnly
+
 if TYPE_CHECKING:
     from timeout_executor.pickler.base import Pickler
 
 __all__ = ["monkey_patch", "monkey_unpatch"]
 
-billiard_origin: list[None | type[Pickler]] = [None]
+billiard_origin: ReadOnly[type[Pickler]] = ReadOnly(None)  # type: ignore
 billiard_origin_status: Final[str] = "billiard"
-billiard_status = [billiard_origin_status]
+billiard_status: ReadOnly[str] = ReadOnly(billiard_origin_status)
 
 
 def monkey_patch(name: str, pickler: Pickler) -> None:
@@ -17,7 +19,7 @@ def monkey_patch(name: str, pickler: Pickler) -> None:
     from timeout_executor.pickler.lock import patch_lock
 
     with patch_lock:
-        if billiard_status[0] == name:
+        if billiard_status == name:
             return
 
         _set_origin()
@@ -42,7 +44,7 @@ def monkey_patch(name: str, pickler: Pickler) -> None:
         connection.ForkingPickler = pickler
         sharedctypes.ForkingPickler = pickler
 
-        billiard_status[0] = name
+        billiard_status.force_set(name)
 
 
 def monkey_unpatch() -> None:
@@ -62,20 +64,20 @@ def monkey_unpatch() -> None:
 
         if billiard_status == billiard_origin_status:
             return
-        if billiard_origin[0] is None:
+        if billiard_origin.value is None:
             raise RuntimeError("origin is None")
 
-        reduction.ForkingPickler = billiard_origin[0]
-        reduction.register = billiard_origin[0].register
-        queues.ForkingPickler = billiard_origin[0]
-        connection.ForkingPickler = billiard_origin[0]
-        sharedctypes.ForkingPickler = billiard_origin[0]
+        reduction.ForkingPickler = billiard_origin.value
+        reduction.register = billiard_origin.value.register
+        queues.ForkingPickler = billiard_origin.value
+        connection.ForkingPickler = billiard_origin.value
+        sharedctypes.ForkingPickler = billiard_origin.value
 
-        billiard_status[0] = billiard_origin_status
+        billiard_status.force_set(billiard_origin_status)
 
 
 def _set_origin() -> None:
-    if billiard_origin[0] is not None:
+    if billiard_origin.value is not None:
         return
 
     try:
@@ -83,4 +85,4 @@ def _set_origin() -> None:
     except (ImportError, ModuleNotFoundError) as exc:
         raise ImportError("install extra first: billiard") from exc
 
-    billiard_origin[0] = ForkingPickler  # type: ignore
+    billiard_origin.force_set(ForkingPickler)  # type: ignore
