@@ -1,5 +1,10 @@
 # timeout-executor
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![github action](https://github.com/phi-friday/timeout-executor/actions/workflows/check.yaml/badge.svg?event=push&branch=dev)](#)
+[![PyPI version](https://badge.fury.io/py/timeout-executor.svg)](https://badge.fury.io/py/timeout-executor)
+[![python version](https://img.shields.io/pypi/pyversions/timeout_executor.svg)](#)
+
 ## how to install
 ```shell
 $ pip install timeout_executor
