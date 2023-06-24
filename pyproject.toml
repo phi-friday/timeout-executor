@@ -1,43 +1,37 @@
-[project]
+[tool.poetry]
 name = "timeout-executor"
 version = "0.1.0"
 description = "execute with timeout"
-authors = [{ name = "phi", email = "phi.friday@gmail.com" }]
-requires-python = ">=3.8"
+authors = ["phi <phi.friday@gmail.com>"]
 readme = "README.md"
-license = { text = "MIT License" }
+license = "MIT License"
+packages = [{ include = "timeout_executor", from = "src" }]
 
-dependencies = ["anyio>=3.7.0", "typing-extensions>=4.6.3"]
+[tool.poetry.dependencies]
+python = ">=3.8"
+anyio = ">=3.7.0"
+typing-extensions = ">=4.6.3"
+billiard = { version = ">=4.0.0", optional = true }
+dill = { version = ">=0.3.6", optional = true }
+cloudpickle = { version = ">=2.2.1", optional = true }
 
-[project.optional-dependencies]
-all = ["billiard>=4.0.0", "dill>=0.3.6", "cloudpickle>=2.2.1"]
-billiard = ["billiard>=4.0.0", "dill>=0.3.6"]
-dill = ["dill>=0.3.6"]
-cloudpickle = ["cloudpickle>=2.2.1"]
+[tool.poetry.extras]
+all = ['billiard', 'dill', 'cloudpickle']
+billiard = ['billiard', 'dill']
+dill = ['dill']
+cloudpickle = ['cloudpickle']
 
-[tool.pdm.build]
-includes = ["src/timeout_executor"]
-
-[tool.pdm.dev-dependencies]
-lint = [
-    "ruff==0.0.275",
-    "black==23.3.0",
-    "pre-commit>=3.3.3",
-]
-test = [
-    "pytest>=7.4.0",
-    "pytest-asyncio>=0.21.0",
-]
-local = [
-    "ipykernel>=6.23.3",
-]
-build = [
-    "flit>=3.9.0",
-]
+[tool.poetry.group.dev.dependencies]
+ruff = "0.0.275"
+black = "23.3.0"
+ipykernel = "^6.23.3"
+pytest = "^7.4.0"
+pytest-asyncio = "^0.21.0"
+pre-commit = "^3.3.3"
 
 [build-system]
-requires = ["flit_core>=3.2,<4"]
-build-backend = "flit_core.buildapi"
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
 
 [tool.ruff]
 target-version = "py38"
