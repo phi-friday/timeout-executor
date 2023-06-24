@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "timeout-executor"
-version = "0.0.0" # will be replaced
+version = "0.0.0"                                             # will be replaced
 description = "execute with timeout"
 authors = ["phi <phi.friday@gmail.com>"]
 readme = "README.md"
@@ -13,6 +13,7 @@ packages = [{ include = "timeout_executor", from = "src" }]
 python = ">=3.8"
 anyio = ">=3.7.0"
 typing-extensions = ">=4.6.3"
+tomli = { version = "^2.0.1", python = "<3.11" }
 billiard = { version = ">=4.0.0", optional = true }
 dill = { version = ">=0.3.6", optional = true }
 cloudpickle = { version = ">=2.2.1", optional = true }
