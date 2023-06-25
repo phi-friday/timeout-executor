@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import importlib
-import sys
 from concurrent.futures import wait
 from functools import lru_cache, partial
 from typing import (
@@ -33,12 +32,6 @@ __all__ = ["TimeoutExecutor", "get_executor"]
 
 ParamT = ParamSpec("ParamT")
 ResultT = TypeVar("ResultT")
-IPYTHON_SHELL_NAMES = frozenset(
-    {
-        "ZMQInteractiveShell",
-        "TerminalInteractiveShell",
-    },
-)
 
 ContextType = Literal["billiard", "multiprocessing"]
 PicklerType = Literal["pickle", "dill", "cloudpickle"]
@@ -211,11 +204,7 @@ def _validate_context_and_pickler(
     pickler: Any,
 ) -> tuple[ContextType, PicklerType]:
     if not context:
-        context = (
-            "billiard"
-            if _is_jupyter() and _check_deps("billiard")
-            else "multiprocessing"
-        )
+        context = "multiprocessing"
     if not pickler:
         if _check_deps("dill"):
             pickler = "dill"
@@ -289,30 +278,6 @@ async def _async_run_with_stream(
     async with _stream:
         result = await func(*args, **kwargs)
         await _stream.send(result)
-
-
-def _is_jupyter() -> bool:
-    frame = sys._getframe()  # noqa: SLF001
-    while frame.f_back:
-        if "get_ipython" in frame.f_globals:
-            ipython_func = frame.f_globals.get("get_ipython", None)
-            if callable(ipython_func):
-                return _is_jupyter_from_shell(ipython_func())
-        frame = frame.f_back
-    if "get_ipython" in frame.f_globals:
-        ipython_func = frame.f_globals.get("get_ipython", None)
-        if callable(ipython_func):
-            return _is_jupyter_from_shell(ipython_func())
-    return False
-
-
-def _is_jupyter_from_shell(shell: Any) -> bool:
-    try:
-        shell_name: str = type(shell).__name__
-    except NameError:
-        return False
-
-    return shell_name in IPYTHON_SHELL_NAMES
 
 
 @lru_cache
