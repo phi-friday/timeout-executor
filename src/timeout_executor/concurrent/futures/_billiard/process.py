@@ -384,8 +384,7 @@ class ProcessPoolExecutor(_base.Executor):
     def shutdown(
         self,
         wait: bool = True,  # noqa: FBT001
-        *,
-        cancel_futures: bool = False,
+        cancel_futures: bool = False,  # noqa: FBT001
     ) -> None:
         with self._shutdown_lock:
             self._cancel_pending_futures = cancel_futures
