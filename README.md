@@ -13,6 +13,8 @@ $ pip install "timeout_executor[all]"
 # or
 $ pip install "timeout_executor[billiard]"
 # or
+$ pip install "timeout_executor[joblib]"
+# or
 $ pip install "timeout_executor[dill]"
 # or
 $ pip install "timeout_executor[cloudpickle]"
