@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import importlib
-import sys
 from concurrent.futures import wait
 from functools import lru_cache, partial
 from typing import (
@@ -18,30 +17,27 @@ from typing import (
 import anyio
 from typing_extensions import ParamSpec
 
+from timeout_executor.concurrent import get_context_executor
 from timeout_executor.log import logger
 from timeout_executor.pickler import monkey_patch, monkey_unpatch
+from timeout_executor.pickler.lock import patch_lock
 
 if TYPE_CHECKING:
     from threading import RLock
 
     from anyio.abc import ObjectSendStream
 
-    from .concurrent.futures import _billiard as billiard_future
-    from .concurrent.futures import _multiprocessing as multiprocessing_future
+    from timeout_executor.concurrent.futures import _billiard as billiard_future
+    from timeout_executor.concurrent.futures import (
+        _multiprocessing as multiprocessing_future,
+    )
+    from timeout_executor.concurrent.main import ContextType
+    from timeout_executor.pickler.main import PicklerType
 
 __all__ = ["TimeoutExecutor", "get_executor"]
 
 ParamT = ParamSpec("ParamT")
 ResultT = TypeVar("ResultT")
-IPYTHON_SHELL_NAMES = frozenset(
-    {
-        "ZMQInteractiveShell",
-        "TerminalInteractiveShell",
-    },
-)
-
-ContextType = Literal["billiard", "multiprocessing"]
-PicklerType = Literal["pickle", "dill", "cloudpickle"]
 
 
 class TimeoutExecutor:
@@ -62,7 +58,6 @@ class TimeoutExecutor:
     @property
     def lock(self) -> RLock:
         """patch lock"""
-        from timeout_executor.pickler.lock import patch_lock
 
         return patch_lock
 
@@ -196,11 +191,7 @@ def get_executor(
         ProcessPoolExecutor
     """
     context, pickler = _validate_context_and_pickler(context, pickler)
-    future_module = importlib.import_module(
-        f".concurrent.futures._{context}",
-        __package__,
-    )
-    executor = future_module.ProcessPoolExecutor
+    executor = get_context_executor(context)
     _patch_or_unpatch(context, pickler)
 
     return executor
@@ -211,11 +202,7 @@ def _validate_context_and_pickler(
     pickler: Any,
 ) -> tuple[ContextType, PicklerType]:
     if not context:
-        context = (
-            "billiard"
-            if _is_jupyter() and _check_deps("billiard")
-            else "multiprocessing"
-        )
+        context = "multiprocessing"
     if not pickler:
         if _check_deps("dill"):
             pickler = "dill"
@@ -289,30 +276,6 @@ async def _async_run_with_stream(
     async with _stream:
         result = await func(*args, **kwargs)
         await _stream.send(result)
-
-
-def _is_jupyter() -> bool:
-    frame = sys._getframe()  # noqa: SLF001
-    while frame.f_back:
-        if "get_ipython" in frame.f_globals:
-            ipython_func = frame.f_globals.get("get_ipython", None)
-            if callable(ipython_func):
-                return _is_jupyter_from_shell(ipython_func())
-        frame = frame.f_back
-    if "get_ipython" in frame.f_globals:
-        ipython_func = frame.f_globals.get("get_ipython", None)
-        if callable(ipython_func):
-            return _is_jupyter_from_shell(ipython_func())
-    return False
-
-
-def _is_jupyter_from_shell(shell: Any) -> bool:
-    try:
-        shell_name: str = type(shell).__name__
-    except NameError:
-        return False
-
-    return shell_name in IPYTHON_SHELL_NAMES
 
 
 @lru_cache
