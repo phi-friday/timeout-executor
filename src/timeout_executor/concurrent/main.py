@@ -5,11 +5,12 @@ from typing import TYPE_CHECKING, Literal, overload
 
 if TYPE_CHECKING:
     from .futures import _billiard as billiard_future
+    from .futures import _joblib as joblib_future
     from .futures import _multiprocessing as multiprocessing_future
 
 __all__ = ["get_context_executor"]
 
-ContextType = Literal["billiard", "multiprocessing"]
+ContextType = Literal["billiard", "multiprocessing", "joblib"]
 DEFAULT_CONTEXT = "multiprocessing"
 
 
@@ -29,10 +30,18 @@ def get_context_executor(
 
 @overload
 def get_context_executor(
+    context: Literal["joblib"] = ...,
+) -> type[joblib_future.ProcessPoolExecutor]:
+    ...
+
+
+@overload
+def get_context_executor(
     context: str = ...,
 ) -> (
     type[billiard_future.ProcessPoolExecutor]
     | type[multiprocessing_future.ProcessPoolExecutor]
+    | type[joblib_future.ProcessPoolExecutor]
 ):
     ...
 
@@ -42,11 +51,13 @@ def get_context_executor(
 ) -> (
     type[billiard_future.ProcessPoolExecutor]
     | type[multiprocessing_future.ProcessPoolExecutor]
+    | type[joblib_future.ProcessPoolExecutor]
 ):
     """get pool executor
 
     Args:
-        context: billiard or multiprocessing. Defaults to None.
+        context: billiard or multiprocessing or joblib.
+            Defaults to None.
 
     Returns:
         ProcessPoolExecutor
