@@ -17,24 +17,27 @@ from typing import (
 import anyio
 from typing_extensions import ParamSpec
 
+from timeout_executor.concurrent import get_context_executor
 from timeout_executor.log import logger
 from timeout_executor.pickler import monkey_patch, monkey_unpatch
+from timeout_executor.pickler.lock import patch_lock
 
 if TYPE_CHECKING:
     from threading import RLock
 
     from anyio.abc import ObjectSendStream
 
-    from .concurrent.futures import _billiard as billiard_future
-    from .concurrent.futures import _multiprocessing as multiprocessing_future
+    from timeout_executor.concurrent.futures import _billiard as billiard_future
+    from timeout_executor.concurrent.futures import (
+        _multiprocessing as multiprocessing_future,
+    )
+    from timeout_executor.concurrent.main import ContextType
+    from timeout_executor.pickler.main import PicklerType
 
 __all__ = ["TimeoutExecutor", "get_executor"]
 
 ParamT = ParamSpec("ParamT")
 ResultT = TypeVar("ResultT")
-
-ContextType = Literal["billiard", "multiprocessing"]
-PicklerType = Literal["pickle", "dill", "cloudpickle"]
 
 
 class TimeoutExecutor:
@@ -55,7 +58,6 @@ class TimeoutExecutor:
     @property
     def lock(self) -> RLock:
         """patch lock"""
-        from timeout_executor.pickler.lock import patch_lock
 
         return patch_lock
 
@@ -189,11 +191,7 @@ def get_executor(
         ProcessPoolExecutor
     """
     context, pickler = _validate_context_and_pickler(context, pickler)
-    future_module = importlib.import_module(
-        f".concurrent.futures._{context}",
-        __package__,
-    )
-    executor = future_module.ProcessPoolExecutor
+    executor = get_context_executor(context)
     _patch_or_unpatch(context, pickler)
 
     return executor
