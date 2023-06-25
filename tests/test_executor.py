@@ -6,13 +6,15 @@ from collections import deque
 from functools import partial
 from itertools import combinations, product
 from pickle import PicklingError
-from typing import Any, Callable, Literal
+from typing import Any, Callable
 
 import anyio
 import pytest
 from anyio.abc import ObjectSendStream
 
 from timeout_executor import TimeoutExecutor
+from timeout_executor.concurrent.main import ContextType
+from timeout_executor.pickler.main import PicklerType
 
 TEST_SIZE = 3
 
@@ -59,17 +61,12 @@ class TestExecutorSync:
     @pytest.mark.parametrize(
         ("context", "pickler", "x"),
         product(
-            ("billiard", "multiprocessing"),
+            ("billiard", "multiprocessing", "joblib"),
             ("dill", "cloudpickle"),
             range(TEST_SIZE),
         ),
     )
-    def test_apply_lambda(
-        self,
-        context: Literal["billiard", "multiprocessing"],
-        pickler: Literal["dill", "cloudpickle"],
-        x: int,
-    ):
+    def test_apply_lambda(self, context: ContextType, pickler: PicklerType, x: int):
         executor = TimeoutExecutor(1, context, pickler=pickler)
         result = executor.apply(lambda: x)
         assert isinstance(result, int)
@@ -176,15 +173,15 @@ class TestExecutorAsync:
     @pytest.mark.parametrize(
         ("context", "pickler", "x"),
         product(
-            ("billiard", "multiprocessing"),
+            ("billiard", "multiprocessing", "joblib"),
             ("dill", "cloudpickle"),
             range(TEST_SIZE),
         ),
     )
     async def test_apply_lambda(
         self,
-        context: Literal["billiard", "multiprocessing"],
-        pickler: Literal["dill", "cloudpickle"],
+        context: ContextType,
+        pickler: PicklerType,
         x: int,
     ):
         executor = TimeoutExecutor(1, context, pickler=pickler)
