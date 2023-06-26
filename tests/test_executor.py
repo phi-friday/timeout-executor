@@ -61,7 +61,7 @@ class TestExecutorSync:
     @pytest.mark.parametrize(
         ("context", "pickler", "x"),
         product(
-            ("billiard", "multiprocessing", "joblib"),
+            ("billiard", "multiprocessing", "loky"),
             ("dill", "cloudpickle"),
             range(TEST_SIZE),
         ),
@@ -173,7 +173,7 @@ class TestExecutorAsync:
     @pytest.mark.parametrize(
         ("context", "pickler", "x"),
         product(
-            ("billiard", "multiprocessing", "joblib"),
+            ("billiard", "multiprocessing", "loky"),
             ("dill", "cloudpickle"),
             range(TEST_SIZE),
         ),

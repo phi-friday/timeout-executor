@@ -4,10 +4,13 @@ import copyreg
 import io
 from typing import Any, Callable, ClassVar, TypeVar
 
+from timeout_executor.exception import ExtraError
+
 try:
     import dill  # type: ignore
-except (ImportError, ModuleNotFoundError) as exc:
-    raise ImportError("install extra first: dill") from exc
+except ImportError as exc:
+    error = ExtraError.from_import_error(exc, extra="dill")
+    raise error from exc
 
 ValueT = TypeVar("ValueT")
 

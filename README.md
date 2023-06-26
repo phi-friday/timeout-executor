@@ -13,7 +13,7 @@ $ pip install "timeout_executor[all]"
 # or
 $ pip install "timeout_executor[billiard]"
 # or
-$ pip install "timeout_executor[joblib]"
+$ pip install "timeout_executor[loky]"
 # or
 $ pip install "timeout_executor[dill]"
 # or

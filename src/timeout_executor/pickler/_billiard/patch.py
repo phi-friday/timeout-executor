@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable, Final
 
+from timeout_executor.exception import ExtraError
 from timeout_executor.readonly import ReadOnly
 
 if TYPE_CHECKING:
@@ -30,8 +31,9 @@ def monkey_patch(name: str, pickler: Pickler) -> None:
                 reduction,  # type: ignore
                 sharedctypes,  # type: ignore
             )
-        except (ImportError, ModuleNotFoundError) as exc:
-            raise ImportError("install extra first: billiard") from exc
+        except ImportError as exc:
+            error = ExtraError.from_import_error(exc, extra="billiard")
+            raise error from exc
 
         origin_register: dict[
             type[Any],
@@ -59,8 +61,9 @@ def monkey_unpatch() -> None:
                 reduction,  # type: ignore
                 sharedctypes,  # type: ignore
             )
-        except (ImportError, ModuleNotFoundError) as exc:
-            raise ImportError("install extra first: billiard") from exc
+        except ImportError as exc:
+            error = ExtraError.from_import_error(exc, extra="billiard")
+            raise error from exc
 
         if billiard_status == billiard_origin_status:
             return
@@ -82,7 +85,8 @@ def _set_origin() -> None:
 
     try:
         from billiard.reduction import ForkingPickler
-    except (ImportError, ModuleNotFoundError) as exc:
-        raise ImportError("install extra first: billiard") from exc
+    except ImportError as exc:
+        error = ExtraError.from_import_error(exc, extra="billiard")
+        raise error from exc
 
     billiard_origin.force_set(ForkingPickler)  # type: ignore

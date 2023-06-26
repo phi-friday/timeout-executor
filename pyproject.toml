@@ -16,12 +16,13 @@ typing-extensions = ">=4.6.3"
 billiard = { version = ">=4.0.0", optional = true }
 dill = { version = ">=0.3.6", optional = true }
 cloudpickle = { version = ">=2.2.1", optional = true }
-joblib = { version = "^1.2.0", optional = true }
+loky = { version = "^3.4.0", optional = true }
+psutil = { version = "^5.9.5", optional = true }
 
 [tool.poetry.extras]
-all = ['billiard', "joblib", 'dill', 'cloudpickle']
+all = ['billiard', "loky", "psutil", 'dill', 'cloudpickle']
 billiard = ['billiard', 'dill']
-joblib = ["joblib"]
+loky = ["loky", "psutil", "cloudpickle"]
 dill = ['dill']
 cloudpickle = ['cloudpickle']
 
