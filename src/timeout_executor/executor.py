@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from anyio.abc import ObjectSendStream
 
     from timeout_executor.concurrent.futures import _billiard as billiard_future
-    from timeout_executor.concurrent.futures import _joblib as joblib_future
+    from timeout_executor.concurrent.futures import _loky as loky_future
     from timeout_executor.concurrent.futures import (
         _multiprocessing as multiprocessing_future,
     )
@@ -167,9 +167,9 @@ def get_executor(
 
 @overload
 def get_executor(
-    context: Literal["joblib"] = ...,
+    context: Literal["loky"] = ...,
     pickler: PicklerType | None = ...,
-) -> type[joblib_future.ProcessPoolExecutor]:
+) -> type[loky_future.ProcessPoolExecutor]:
     ...
 
 
@@ -180,7 +180,7 @@ def get_executor(
 ) -> (
     type[billiard_future.ProcessPoolExecutor]
     | type[multiprocessing_future.ProcessPoolExecutor]
-    | type[joblib_future.ProcessPoolExecutor]
+    | type[loky_future.ProcessPoolExecutor]
 ):
     ...
 
@@ -191,7 +191,7 @@ def get_executor(
 ) -> (
     type[billiard_future.ProcessPoolExecutor]
     | type[multiprocessing_future.ProcessPoolExecutor]
-    | type[joblib_future.ProcessPoolExecutor]
+    | type[loky_future.ProcessPoolExecutor]
 ):
     """get pool executor
 
@@ -203,9 +203,6 @@ def get_executor(
     """
     context, pickler = _validate_context_and_pickler(context, pickler)
     executor = get_context_executor(context)
-    if context == "joblib" and pickler == "pickle":
-        return executor
-
     _patch_or_unpatch(context, pickler)
     return executor
 
@@ -217,14 +214,9 @@ def _validate_context_and_pickler(
     if not context:
         context = "multiprocessing"
     if not pickler:
-        if _check_deps("dill"):
-            pickler = "dill"
-        elif _check_deps("cloudpickle"):
-            pickler = "cloudpickle"
-        else:
-            pickler = "pickle"
+        pickler = None
 
-    if context == "billiard" and pickler == "pickle":
+    if context == "billiard" and (pickler == "pickle" or pickler is None):
         if _check_deps("dill"):
             logger.warning("billiard will use dill")
             pickler = "dill"
@@ -233,9 +225,16 @@ def _validate_context_and_pickler(
             pickler = "cloudpickle"
         else:
             raise ModuleNotFoundError("Billiard needs dill or cloudpickle")
-    elif context == "joblib" and pickler != "pickle":
-        logger.warning("Joblib uses self-implemented lib.")
-        pickler = "pickle"
+    elif context == "loky" and (pickler == "pickle" or pickler is None):
+        logger.warning("loky uses cloudpickle as the default")
+        pickler = "cloudpickle"
+    elif not pickler:
+        if _check_deps("dill"):
+            pickler = "dill"
+        elif _check_deps("cloudpickle"):
+            pickler = "cloudpickle"
+        else:
+            pickler = "pickle"
 
     return context, pickler
 

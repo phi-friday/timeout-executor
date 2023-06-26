@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar
 
-from joblib.externals.loky.process_executor import (
+from loky.process_executor import (
     ProcessPoolExecutor as LockyProcessPoolExecutor,
 )
 
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
         SpawnContext,
     )
 
-    from joblib.externals.loky._base import Future as LockyFuture
+    from loky._base import Future as LockyFuture
     from typing_extensions import ParamSpec, override
 
     _P = ParamSpec("_P")
