@@ -22,7 +22,7 @@ psutil = { version = "^5.9.5", optional = true }
 [tool.poetry.extras]
 all = ['billiard', "loky", "psutil", 'dill', 'cloudpickle']
 billiard = ['billiard', 'dill']
-loky = ["loky", "psutil"]
+loky = ["loky", "psutil", "cloudpickle"]
 dill = ['dill']
 cloudpickle = ['cloudpickle']
 

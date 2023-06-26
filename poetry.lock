@@ -1227,9 +1227,9 @@ all = ["billiard", "cloudpickle", "dill", "loky", "psutil"]
 billiard = ["billiard", "dill"]
 cloudpickle = ["cloudpickle"]
 dill = ["dill"]
-loky = ["loky", "psutil"]
+loky = ["cloudpickle", "loky", "psutil"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8"
-content-hash = "b19ab76f13f46406a3499db132a3c8387674fa69a3fee276fb2c101515f24a96"
+content-hash = "118744ee08df6da6311503eacbe2f82bece8de291a5cfe8d5453ad96e9a584d6"
