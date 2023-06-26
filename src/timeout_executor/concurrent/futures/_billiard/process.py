@@ -35,13 +35,16 @@ from typing import (
 
 from typing_extensions import ParamSpec, TypeAlias, override
 
+from timeout_executor.exception import ExtraError
+
 try:
     import billiard  # type: ignore
     from billiard import util as bi_util  # type: ignore
     from billiard.connection import wait as bi_wait  # type: ignore
     from billiard.queues import Queue  # type: ignore
-except (ImportError, ModuleNotFoundError) as exc:
-    raise ImportError("install extra first: billiard") from exc
+except ImportError as exc:
+    error = ExtraError.from_import_error(exc, extra="billiard")
+    raise error from exc
 
 if TYPE_CHECKING:
     from concurrent.futures import Future

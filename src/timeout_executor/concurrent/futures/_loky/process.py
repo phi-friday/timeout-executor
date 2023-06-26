@@ -2,9 +2,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar
 
-from loky.process_executor import (
-    ProcessPoolExecutor as LockyProcessPoolExecutor,
-)
+from timeout_executor.exception import ExtraError
+
+try:
+    from loky.process_executor import (  # type: ignore
+        ProcessPoolExecutor as LockyProcessPoolExecutor,  # type: ignore
+    )
+except ImportError as exc:
+    error = ExtraError.from_import_error(exc, extra="loky")
+    raise error from exc
 
 __all__ = ["ProcessPoolExecutor"]
 
@@ -17,7 +23,7 @@ if TYPE_CHECKING:
         SpawnContext,
     )
 
-    from loky._base import Future as LockyFuture
+    from loky._base import Future as LockyFuture  # type: ignore
     from typing_extensions import ParamSpec, override
 
     _P = ParamSpec("_P")
@@ -25,11 +31,14 @@ if TYPE_CHECKING:
 
     class Future(LockyFuture, Generic[_T]):
         @override
-        def add_done_callback(self, fn: Callable[[Future[_T]], object]) -> None:
+        def add_done_callback(  # type: ignore
+            self,
+            fn: Callable[[Future[_T]], object],
+        ) -> None:
             ...
 
         @override
-        def set_result(self, result: _T) -> None:
+        def set_result(self, result: _T) -> None:  # type: ignore
             ...
 
     class ProcessPoolExecutor(LockyProcessPoolExecutor):
@@ -52,7 +61,7 @@ if TYPE_CHECKING:
             ...
 
         @override
-        def submit(
+        def submit(  # type: ignore
             self,
             fn: Callable[_P, _T],
             /,
@@ -62,7 +71,7 @@ if TYPE_CHECKING:
             ...
 
         @override
-        def shutdown(
+        def shutdown(  # type: ignore
             self,
             wait: bool = True,  # noqa: FBT001
             kill_workers: bool = False,  # noqa: FBT001
