@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Sequence
 from typing_extensions import Self, override
 
 if sys.version_info < (3, 11):
-    from exceptiongroup import ExceptionGroup
+    from exceptiongroup import ExceptionGroup  # type: ignore
 
 __all__ = ["ExtraError", "ImportErrors"]
 
