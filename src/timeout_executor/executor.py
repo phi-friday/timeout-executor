@@ -2,17 +2,8 @@ from __future__ import annotations
 
 import asyncio
 from concurrent.futures import wait
-from functools import lru_cache, partial
-from importlib.util import find_spec
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Coroutine,
-    Literal,
-    TypeVar,
-    overload,
-)
+from functools import partial
+from typing import TYPE_CHECKING, Any, Callable, Coroutine, Literal, TypeVar, overload
 
 import anyio
 from typing_extensions import ParamSpec
@@ -239,9 +230,3 @@ async def _async_run_with_stream(
     async with _stream:
         result = await func(*args, **kwargs)
         await _stream.send(result)
-
-
-@lru_cache
-def _check_deps(module_name: str) -> bool:
-    spec = find_spec(module_name)
-    return spec is not None
