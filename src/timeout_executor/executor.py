@@ -174,7 +174,8 @@ def get_executor(
     """get pool executor
 
     Args:
-        backend: billiard or multiprocessing. Defaults to None.
+        backend: backend type as string. Defaults to None.
+        pickler: pickler type as string. Defaults to None.
 
     Returns:
         ProcessPoolExecutor
