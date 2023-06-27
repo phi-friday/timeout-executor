@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING, Any, Callable, Final
 from timeout_executor.readonly import ReadOnly
 
 if TYPE_CHECKING:
-    from timeout_executor.pickler.base import Pickler
-    from timeout_executor.pickler.main import PicklerType
+    from timeout_executor.serde.base import Pickler
+    from timeout_executor.serde.main import PicklerType
 
 __all__ = ["monkey_patch", "monkey_unpatch"]
 
@@ -20,7 +20,7 @@ order: tuple[PicklerType, ...] = ("pickle", "dill", "cloudpickle")
 
 def monkey_patch(name: str, pickler: type[Pickler]) -> None:
     """patch multiprocessing"""
-    from timeout_executor.pickler.lock import patch_lock
+    from timeout_executor.serde.lock import patch_lock
 
     with patch_lock:
         if multiprocessing_status == name:
@@ -46,7 +46,7 @@ def monkey_patch(name: str, pickler: type[Pickler]) -> None:
 
 def monkey_unpatch() -> None:
     """unpatch multiprocessing"""
-    from timeout_executor.pickler.lock import patch_lock
+    from timeout_executor.serde.lock import patch_lock
 
     with patch_lock:
         from multiprocessing import connection, queues, reduction, sharedctypes

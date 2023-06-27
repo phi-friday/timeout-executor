@@ -8,7 +8,7 @@ from timeout_executor.log import logger
 
 if TYPE_CHECKING:
     from timeout_executor.concurrent.main import BackendType
-    from timeout_executor.pickler.base import BackendModule, PicklerModule
+    from timeout_executor.serde.base import BackendModule, PicklerModule
 
 __all__ = ["monkey_patch"]
 
@@ -39,7 +39,7 @@ def _import_backend(backend: BackendType) -> BackendModule:
 
 
 def _import_pickler(pickler: PicklerType) -> PicklerModule:
-    name = f"._{pickler}"
+    name = f".pickler._{pickler}"
     spec = find_spec(name, __package__)
     if spec is None:
         error_msg = f"invalid pickler: {pickler}"

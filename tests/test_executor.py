@@ -14,7 +14,7 @@ from anyio.abc import ObjectSendStream
 
 from timeout_executor import TimeoutExecutor
 from timeout_executor.concurrent.main import BackendType
-from timeout_executor.pickler.main import PicklerType
+from timeout_executor.serde.main import PicklerType
 
 TEST_SIZE = 3
 

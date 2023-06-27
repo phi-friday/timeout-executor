@@ -9,8 +9,8 @@ import anyio
 from typing_extensions import ParamSpec
 
 from timeout_executor.concurrent import get_executor_backend
-from timeout_executor.pickler import monkey_patch
-from timeout_executor.pickler.lock import patch_lock
+from timeout_executor.serde import monkey_patch
+from timeout_executor.serde.lock import patch_lock
 
 if TYPE_CHECKING:
     from threading import RLock
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
         _multiprocessing as multiprocessing_future,
     )
     from timeout_executor.concurrent.main import BackendType
-    from timeout_executor.pickler.main import PicklerType
+    from timeout_executor.serde.main import PicklerType
 
 __all__ = ["TimeoutExecutor", "get_executor"]
 

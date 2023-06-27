@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     import io
     from types import ModuleType
 
-    from timeout_executor.pickler.main import PicklerType
+    from timeout_executor.serde.main import PicklerType
 
     class BackendModule(ModuleType):
         unpatch: frozenset[PicklerType]

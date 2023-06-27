@@ -5,12 +5,12 @@ import io
 from typing import Any, Callable, ClassVar, TypeVar
 
 from timeout_executor.exception import ExtraError
-from timeout_executor.pickler.base import Pickler as BasePickler
+from timeout_executor.serde.base import Pickler as BasePickler
 
 try:
-    import cloudpickle  # type: ignore
+    import dill  # type: ignore
 except ImportError as exc:
-    error = ExtraError.from_import_error(exc, extra="cloudpickle")
+    error = ExtraError.from_import_error(exc, extra="dill")
     raise error from exc
 
 ValueT = TypeVar("ValueT")
@@ -18,7 +18,7 @@ ValueT = TypeVar("ValueT")
 __all__ = ["Pickler"]
 
 
-class Pickler(cloudpickle.Pickler):
+class Pickler(dill.Pickler):
     _extra_reducers: ClassVar[dict[type[Any], Callable[[Any], Any]]] = {}
     _copyreg_dispatch_table = copyreg.dispatch_table
 
@@ -52,9 +52,9 @@ class Pickler(cloudpickle.Pickler):
         buf: io.BytesIO,
         protocol: int | None = None,  # noqa: ARG003
     ) -> Any:
-        return cls.loads(buf.getbuffer())  # type: ignore
+        return cls.loads(buf.getbuffer())
 
-    loads = cloudpickle.loads
+    loads = dill.loads
 
 
 if not isinstance(Pickler, BasePickler):

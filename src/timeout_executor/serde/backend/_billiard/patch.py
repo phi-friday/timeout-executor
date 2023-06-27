@@ -6,7 +6,7 @@ from timeout_executor.exception import ExtraError
 from timeout_executor.readonly import ReadOnly
 
 if TYPE_CHECKING:
-    from timeout_executor.pickler.base import Pickler
+    from timeout_executor.serde.base import Pickler
 
 __all__ = ["monkey_patch", "monkey_unpatch"]
 
@@ -17,7 +17,7 @@ billiard_status: ReadOnly[str] = ReadOnly(billiard_origin_status)
 
 def monkey_patch(name: str, pickler: type[Pickler]) -> None:
     """patch billiard"""
-    from timeout_executor.pickler.lock import patch_lock
+    from timeout_executor.serde.lock import patch_lock
 
     with patch_lock:
         if billiard_status == name:
@@ -51,7 +51,7 @@ def monkey_patch(name: str, pickler: type[Pickler]) -> None:
 
 def monkey_unpatch() -> None:
     """unpatch billiard"""
-    from timeout_executor.pickler.lock import patch_lock
+    from timeout_executor.serde.lock import patch_lock
 
     with patch_lock:
         try:
