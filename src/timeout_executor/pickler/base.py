@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
     from timeout_executor.pickler.main import PicklerType
 
-    class ContextModule(ModuleType):
+    class BackendModule(ModuleType):
         unpatch: frozenset[PicklerType]
         replace: dict[PicklerType, PicklerType]
         order: tuple[PicklerType]
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 ValueT = TypeVar("ValueT")
 
-__all__ = ["Pickler", "Monkey", "UnMonkey", "ContextModule", "PicklerModule"]
+__all__ = ["Pickler", "Monkey", "UnMonkey", "BackendModule", "PicklerModule"]
 
 
 class Pickler(Protocol):

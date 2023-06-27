@@ -8,46 +8,35 @@ if TYPE_CHECKING:
     from .futures import _loky as loky_future
     from .futures import _multiprocessing as multiprocessing_future
 
-__all__ = ["get_context_executor"]
+__all__ = ["get_executor_backend"]
 
-ContextType = Literal["billiard", "multiprocessing", "loky"]
-DEFAULT_CONTEXT = "multiprocessing"
+BackendType = Literal["billiard", "multiprocessing", "loky"]
+DEFAULT_BACKEND = "multiprocessing"
 
 
 @overload
-def get_context_executor(
-    context: Literal["multiprocessing"] | None = ...,
+def get_executor_backend(
+    backend: Literal["multiprocessing"] | None = ...,
 ) -> type[multiprocessing_future.ProcessPoolExecutor]:
     ...
 
 
 @overload
-def get_context_executor(
-    context: Literal["billiard"] = ...,
+def get_executor_backend(
+    backend: Literal["billiard"] = ...,
 ) -> type[billiard_future.ProcessPoolExecutor]:
     ...
 
 
 @overload
-def get_context_executor(
-    context: Literal["loky"] = ...,
+def get_executor_backend(
+    backend: Literal["loky"] = ...,
 ) -> type[loky_future.ProcessPoolExecutor]:
     ...
 
 
-@overload
-def get_context_executor(
-    context: str = ...,
-) -> (
-    type[billiard_future.ProcessPoolExecutor]
-    | type[multiprocessing_future.ProcessPoolExecutor]
-    | type[loky_future.ProcessPoolExecutor]
-):
-    ...
-
-
-def get_context_executor(
-    context: ContextType | str | None = None,
+def get_executor_backend(
+    backend: BackendType | None = None,
 ) -> (
     type[billiard_future.ProcessPoolExecutor]
     | type[multiprocessing_future.ProcessPoolExecutor]
@@ -56,14 +45,12 @@ def get_context_executor(
     """get pool executor
 
     Args:
-        context: billiard or multiprocessing or loky.
+        backend: billiard or multiprocessing or loky.
             Defaults to None.
 
     Returns:
         ProcessPoolExecutor
     """
-    if not context:
-        context = DEFAULT_CONTEXT
-
-    module = importlib.import_module(f".futures._{context}", __package__)
+    backend = backend or DEFAULT_BACKEND
+    module = importlib.import_module(f".futures._{backend}", __package__)
     return module.ProcessPoolExecutor

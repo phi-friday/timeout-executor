@@ -17,7 +17,7 @@ from typing import (
 import anyio
 from typing_extensions import ParamSpec
 
-from timeout_executor.concurrent import get_context_executor
+from timeout_executor.concurrent import get_executor_backend
 from timeout_executor.pickler import monkey_patch
 from timeout_executor.pickler.lock import patch_lock
 
@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from timeout_executor.concurrent.futures import (
         _multiprocessing as multiprocessing_future,
     )
-    from timeout_executor.concurrent.main import ContextType
+    from timeout_executor.concurrent.main import BackendType
     from timeout_executor.pickler.main import PicklerType
 
 __all__ = ["TimeoutExecutor", "get_executor"]
@@ -46,14 +46,14 @@ class TimeoutExecutor:
     def __init__(
         self,
         timeout: float,
-        context: ContextType | None = None,
+        backend: BackendType | None = None,
         pickler: PicklerType | None = None,
     ) -> None:
         self.timeout = timeout
         self._init = None
         self._args = ()
         self._kwargs = {}
-        self._select = (context, pickler)
+        self._select = (backend, pickler)
 
     @property
     def lock(self) -> RLock:
@@ -150,7 +150,7 @@ class TimeoutExecutor:
 
 @overload
 def get_executor(
-    context: Literal["multiprocessing"] | None = ...,
+    backend: Literal["multiprocessing"] | None = ...,
     pickler: PicklerType | None = ...,
 ) -> type[multiprocessing_future.ProcessPoolExecutor]:
     ...
@@ -158,7 +158,7 @@ def get_executor(
 
 @overload
 def get_executor(
-    context: Literal["billiard"] = ...,
+    backend: Literal["billiard"] = ...,
     pickler: PicklerType | None = ...,
 ) -> type[billiard_future.ProcessPoolExecutor]:
     ...
@@ -166,14 +166,14 @@ def get_executor(
 
 @overload
 def get_executor(
-    context: Literal["loky"] = ...,
+    backend: Literal["loky"] = ...,
     pickler: PicklerType | None = ...,
 ) -> type[loky_future.ProcessPoolExecutor]:
     ...
 
 
 def get_executor(
-    context: ContextType | None = None,
+    backend: BackendType | None = None,
     pickler: PicklerType | None = None,
 ) -> (
     type[billiard_future.ProcessPoolExecutor]
@@ -183,14 +183,14 @@ def get_executor(
     """get pool executor
 
     Args:
-        context: billiard or multiprocessing. Defaults to None.
+        backend: billiard or multiprocessing. Defaults to None.
 
     Returns:
         ProcessPoolExecutor
     """
-    context = context or "multiprocessing"
-    executor = get_context_executor(context)
-    monkey_patch(context, pickler)
+    backend = backend or "multiprocessing"
+    executor = get_executor_backend(backend)
+    monkey_patch(backend, pickler)
     return executor
 
 

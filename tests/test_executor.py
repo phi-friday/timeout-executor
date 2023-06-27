@@ -13,7 +13,7 @@ import pytest
 from anyio.abc import ObjectSendStream
 
 from timeout_executor import TimeoutExecutor
-from timeout_executor.concurrent.main import ContextType
+from timeout_executor.concurrent.main import BackendType
 from timeout_executor.pickler.main import PicklerType
 
 TEST_SIZE = 3
@@ -59,22 +59,22 @@ class TestExecutorSync:
         pytest.raises(TimeoutError, executor.apply, time.sleep, 1.5)
 
     @pytest.mark.parametrize(
-        ("context", "pickler", "x"),
+        ("backend", "pickler", "x"),
         product(
             ("billiard", "multiprocessing", "loky"),
             ("dill", "cloudpickle"),
             range(TEST_SIZE),
         ),
     )
-    def test_apply_lambda(self, context: ContextType, pickler: PicklerType, x: int):
-        executor = TimeoutExecutor(1, context, pickler=pickler)
+    def test_apply_lambda(self, backend: BackendType, pickler: PicklerType, x: int):
+        executor = TimeoutExecutor(1, backend, pickler=pickler)
         result = executor.apply(lambda: x)
         assert isinstance(result, int)
         assert result == x
 
     @pytest.mark.parametrize("x", range(TEST_SIZE))
     def test_apply_lambda_error(self, x: int):
-        executor = TimeoutExecutor(1, context="multiprocessing", pickler="pickle")
+        executor = TimeoutExecutor(1, backend="multiprocessing", pickler="pickle")
         pytest.raises((PicklingError, AttributeError), executor.apply, lambda: x)
 
 
@@ -171,7 +171,7 @@ class TestExecutorAsync:
             raise Exception("TimeoutError does not occur")  # noqa: TRY002
 
     @pytest.mark.parametrize(
-        ("context", "pickler", "x"),
+        ("backend", "pickler", "x"),
         product(
             ("billiard", "multiprocessing", "loky"),
             ("dill", "cloudpickle"),
@@ -180,11 +180,11 @@ class TestExecutorAsync:
     )
     async def test_apply_lambda(
         self,
-        context: ContextType,
+        backend: BackendType,
         pickler: PicklerType,
         x: int,
     ):
-        executor = TimeoutExecutor(1, context, pickler=pickler)
+        executor = TimeoutExecutor(1, backend, pickler=pickler)
 
         async def lambdalike() -> int:
             await asyncio.sleep(0.1)
@@ -196,7 +196,7 @@ class TestExecutorAsync:
 
     @pytest.mark.parametrize("x", range(TEST_SIZE))
     async def test_apply_lambda_error(self, x: int):
-        executor = TimeoutExecutor(1, context="multiprocessing", pickler="pickle")
+        executor = TimeoutExecutor(1, backend="multiprocessing", pickler="pickle")
 
         async def lambdalike() -> int:
             await asyncio.sleep(0.1)
