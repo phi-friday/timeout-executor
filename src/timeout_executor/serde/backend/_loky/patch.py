@@ -7,12 +7,8 @@ from timeout_executor.log import logger
 
 if TYPE_CHECKING:
     from timeout_executor.serde.base import Pickler
-    from timeout_executor.serde.main import PicklerType
 
 __all__ = ["monkey_patch", "monkey_unpatch"]
-
-default: PicklerType = "cloudpickle"
-order: tuple[PicklerType, ...] = ("cloudpickle", "dill")
 
 
 def monkey_patch(name: str, pickler: type[Pickler]) -> None:  # noqa: ARG001
