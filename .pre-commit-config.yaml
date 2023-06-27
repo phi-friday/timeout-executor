@@ -18,4 +18,4 @@ repos:
         pass_filenames: false
         types: [python]
     repo: https://github.com/RobertCraigie/pyright-python
-    rev: v1.1.315
+    rev: v1.1.316
