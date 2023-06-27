@@ -20,7 +20,7 @@ def monkey_patch(backend: BackendType, pickler: PicklerType | None) -> None:
     """monkey patch or unpatch"""
     backend_module = _import_backend(backend)
     pickler, pickler_module = _try_import_pickler(backend, backend_module, pickler)
-    if pickler in backend_module.unpatch:
+    if pickler_module is None:
         logger.debug("backend: %r, %r will be set to the default.", backend, pickler)
         logger.debug("backend: %r: unpatch", backend)
         backend_module.monkey_unpatch()
@@ -74,8 +74,11 @@ def _try_import_pickler(
     backend_name: BackendType,
     backend: BackendModule,
     pickler: PicklerType | None,
-) -> tuple[PicklerType, PicklerModule]:
+) -> tuple[PicklerType, PicklerModule | None]:
     pickler = _validate_pickler(backend_name, backend, pickler)
+    if pickler in backend.unpatch:
+        return pickler, None
+
     try:
         pickler_idx = backend.order.index(pickler)
     except ValueError:
