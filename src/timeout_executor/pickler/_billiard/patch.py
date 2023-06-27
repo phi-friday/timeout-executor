@@ -15,7 +15,7 @@ billiard_origin_status: Final[str] = "billiard"
 billiard_status: ReadOnly[str] = ReadOnly(billiard_origin_status)
 
 
-def monkey_patch(name: str, pickler: Pickler) -> None:
+def monkey_patch(name: str, pickler: type[Pickler]) -> None:
     """patch billiard"""
     from timeout_executor.pickler.lock import patch_lock
 

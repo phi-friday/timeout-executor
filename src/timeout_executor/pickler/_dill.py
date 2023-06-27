@@ -5,6 +5,7 @@ import io
 from typing import Any, Callable, ClassVar, TypeVar
 
 from timeout_executor.exception import ExtraError
+from timeout_executor.pickler.base import Pickler as BasePickler
 
 try:
     import dill  # type: ignore
@@ -54,3 +55,8 @@ class Pickler(dill.Pickler):
         return cls.loads(buf.getbuffer())
 
     loads = dill.loads
+
+
+if not isinstance(Pickler, BasePickler):
+    error_msg = f"{__name__}.Pickler is not Pickler type"
+    raise TypeError(error_msg)

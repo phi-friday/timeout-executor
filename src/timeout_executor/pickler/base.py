@@ -1,6 +1,15 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Protocol, TypeVar
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    ClassVar,
+    Protocol,
+    Type,
+    TypeVar,
+    runtime_checkable,
+)
 
 if TYPE_CHECKING:
     import io
@@ -17,7 +26,7 @@ if TYPE_CHECKING:
         monkey_unpatch: UnMonkey
 
     class PicklerModule(ModuleType):
-        Pickler: Pickler
+        Pickler: type[Pickler]
 
 
 ValueT = TypeVar("ValueT")
@@ -25,6 +34,7 @@ ValueT = TypeVar("ValueT")
 __all__ = ["Pickler", "Monkey", "UnMonkey", "BackendModule", "PicklerModule"]
 
 
+@runtime_checkable
 class Pickler(Protocol):
     _extra_reducers: ClassVar[dict[type[Any], Callable[[Any], Any]]]
     _copyreg_dispatch_table: ClassVar[dict[type[Any], Callable[[Any], Any]]]
@@ -56,5 +66,5 @@ class Pickler(Protocol):
     loads: Callable[..., Any]
 
 
-Monkey = Callable[[str, Pickler], None]
+Monkey = Callable[[str, Type[Pickler]], None]
 UnMonkey = Callable[[], None]

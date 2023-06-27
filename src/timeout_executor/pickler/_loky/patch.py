@@ -15,7 +15,7 @@ default: PicklerType = "cloudpickle"
 order: tuple[PicklerType, ...] = ("cloudpickle", "dill")
 
 
-def monkey_patch(name: str, pickler: Pickler) -> None:  # noqa: ARG001
+def monkey_patch(name: str, pickler: type[Pickler]) -> None:  # noqa: ARG001
     """patch loky"""
     from timeout_executor.pickler.lock import patch_lock
 
