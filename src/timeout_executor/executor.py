@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import asyncio
-import importlib
 from concurrent.futures import wait
 from functools import lru_cache, partial
+from importlib.util import find_spec
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -295,9 +295,5 @@ async def _async_run_with_stream(
 
 @lru_cache
 def _check_deps(module_name: str) -> bool:
-    try:
-        importlib.import_module(module_name)
-    except (ImportError, ModuleNotFoundError):
-        return False
-    else:
-        return True
+    spec = find_spec(module_name)
+    return spec is not None
