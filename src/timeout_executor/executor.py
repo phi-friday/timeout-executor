@@ -18,8 +18,7 @@ import anyio
 from typing_extensions import ParamSpec
 
 from timeout_executor.concurrent import get_context_executor
-from timeout_executor.log import logger
-from timeout_executor.pickler import monkey_patch, monkey_unpatch
+from timeout_executor.pickler import monkey_patch
 from timeout_executor.pickler.lock import patch_lock
 
 if TYPE_CHECKING:
@@ -173,20 +172,8 @@ def get_executor(
     ...
 
 
-@overload
 def get_executor(
-    context: str = ...,
-    pickler: PicklerType | None = ...,
-) -> (
-    type[billiard_future.ProcessPoolExecutor]
-    | type[multiprocessing_future.ProcessPoolExecutor]
-    | type[loky_future.ProcessPoolExecutor]
-):
-    ...
-
-
-def get_executor(
-    context: ContextType | str | None = None,
+    context: ContextType | None = None,
     pickler: PicklerType | None = None,
 ) -> (
     type[billiard_future.ProcessPoolExecutor]
@@ -201,49 +188,10 @@ def get_executor(
     Returns:
         ProcessPoolExecutor
     """
-    context, pickler = _validate_context_and_pickler(context, pickler)
+    context = context or "multiprocessing"
     executor = get_context_executor(context)
-    _patch_or_unpatch(context, pickler)
+    monkey_patch(context, pickler)
     return executor
-
-
-def _validate_context_and_pickler(
-    context: Any,
-    pickler: Any,
-) -> tuple[ContextType, PicklerType]:
-    if not context:
-        context = "multiprocessing"
-    if not pickler:
-        pickler = None
-
-    if context == "billiard" and (pickler == "pickle" or pickler is None):
-        if _check_deps("dill"):
-            logger.warning("billiard will use dill")
-            pickler = "dill"
-        elif _check_deps("cloudpickle"):
-            logger.warning("billiard will use cloudpickle")
-            pickler = "cloudpickle"
-        else:
-            raise ModuleNotFoundError("Billiard needs dill or cloudpickle")
-    elif context == "loky" and (pickler == "pickle" or pickler is None):
-        logger.warning("loky uses cloudpickle as the default")
-        pickler = "cloudpickle"
-    elif not pickler:
-        if _check_deps("dill"):
-            pickler = "dill"
-        elif _check_deps("cloudpickle"):
-            pickler = "cloudpickle"
-        else:
-            pickler = "pickle"
-
-    return context, pickler
-
-
-def _patch_or_unpatch(context: ContextType, pickler: PicklerType) -> None:
-    if pickler == "pickle":
-        monkey_unpatch(context)
-    else:
-        monkey_patch(context, pickler)
 
 
 def _async_run(

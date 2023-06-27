@@ -7,26 +7,39 @@ from timeout_executor.log import logger
 
 if TYPE_CHECKING:
     from timeout_executor.concurrent.main import ContextType
-    from timeout_executor.pickler.base import Monkey, Pickler, UnMonkey
+    from timeout_executor.pickler.base import ContextModule, PicklerModule
 
-__all__ = ["monkey_patch", "monkey_unpatch"]
+__all__ = ["monkey_patch"]
 
 PicklerType = Literal["pickle", "dill", "cloudpickle"]
 
 
-def monkey_patch(context: ContextType, pickler: PicklerType) -> None:
-    """monkey patch"""
-    context_module = importlib.import_module(f"._{context}", __package__)
-    pickler_module = importlib.import_module(f"._{pickler}", __package__)
-    pickler_class: Pickler = pickler_module.Pickler
-    monkey_func: Monkey = context_module.monkey_patch
+def monkey_patch(context: ContextType, pickler: PicklerType | None) -> None:
+    """monkey patch or unpatch"""
+    context_module = _import_context(context)
+    pickler = _validate_pickler(context_module, pickler)
+    if pickler in context_module.unpatch:
+        logger.info("context: %r: unpatch", context)
+        context_module.monkey_unpatch()
+        return
+    pickler_module = _import_pickler(pickler)
     logger.info("context: %r, pickler: %r: patch", context, pickler)
-    monkey_func(pickler, pickler_class)
+    context_module.monkey_patch(pickler, pickler_module.Pickler)
 
 
-def monkey_unpatch(context: ContextType) -> None:
-    """monkey unpatch"""
-    context_module = importlib.import_module(f"._{context}", __package__)
-    unmonkey_func: UnMonkey = context_module.monkey_unpatch
-    logger.info("context: %r: unpatch", context)
-    unmonkey_func()
+def _import_context(context: ContextType) -> ContextModule:
+    return importlib.import_module(f"._{context}", __package__)  # type: ignore
+
+
+def _import_pickler(pickler: PicklerType) -> PicklerModule:
+    return importlib.import_module(f"._{pickler}", __package__)  # type: ignore
+
+
+def _validate_pickler(
+    context: ContextModule,
+    pickler: PicklerType | None,
+) -> PicklerType:
+    pickler = pickler or context.order[0]
+    if pickler in context.replace:
+        pickler = context.replace[pickler]
+    return pickler

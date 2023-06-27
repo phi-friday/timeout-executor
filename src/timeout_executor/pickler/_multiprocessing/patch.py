@@ -6,12 +6,16 @@ from timeout_executor.readonly import ReadOnly
 
 if TYPE_CHECKING:
     from timeout_executor.pickler.base import Pickler
+    from timeout_executor.pickler.main import PicklerType
 
 __all__ = ["monkey_patch", "monkey_unpatch"]
 
 multiprocessing_origin: ReadOnly[type[Pickler]] = ReadOnly(None)  # type: ignore
 multiprocessing_origin_status: Final[str] = "multiprocessing"
 multiprocessing_status: ReadOnly[str] = ReadOnly(multiprocessing_origin_status)
+
+default: PicklerType = "dill"
+order: tuple[PicklerType, ...] = ("pickle", "dill", "cloudpickle")
 
 
 def monkey_patch(name: str, pickler: Pickler) -> None:

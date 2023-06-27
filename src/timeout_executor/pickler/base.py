@@ -4,10 +4,25 @@ from typing import TYPE_CHECKING, Any, Callable, ClassVar, Protocol, TypeVar
 
 if TYPE_CHECKING:
     import io
+    from types import ModuleType
+
+    from timeout_executor.pickler.main import PicklerType
+
+    class ContextModule(ModuleType):
+        unpatch: frozenset[PicklerType]
+        replace: dict[PicklerType, PicklerType]
+        order: tuple[PicklerType]
+
+        monkey_patch: Monkey
+        monkey_unpatch: UnMonkey
+
+    class PicklerModule(ModuleType):
+        Pickler: Pickler
+
 
 ValueT = TypeVar("ValueT")
 
-__all__ = ["Pickler", "Monkey", "UnMonkey"]
+__all__ = ["Pickler", "Monkey", "UnMonkey", "ContextModule", "PicklerModule"]
 
 
 class Pickler(Protocol):
