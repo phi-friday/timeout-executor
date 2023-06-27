@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-import importlib
+from importlib import import_module
+from importlib.util import find_spec
 from typing import TYPE_CHECKING, Literal, overload
 
 if TYPE_CHECKING:
-    from .futures import _billiard as billiard_future
-    from .futures import _loky as loky_future
-    from .futures import _multiprocessing as multiprocessing_future
+    from .futures.backend import _billiard as billiard_future
+    from .futures.backend import _loky as loky_future
+    from .futures.backend import _multiprocessing as multiprocessing_future
 
 __all__ = ["get_executor_backend"]
 
@@ -52,5 +53,10 @@ def get_executor_backend(
         ProcessPoolExecutor
     """
     backend = backend or DEFAULT_BACKEND
-    module = importlib.import_module(f".futures._{backend}", __package__)
+    name = f".futures.backend._{backend}"
+    spec = find_spec(name, __package__)
+    if spec is None:
+        error_msg = f"invalid backend: {backend}"
+        raise ImportError(error_msg)
+    module = import_module(name, __package__)
     return module.ProcessPoolExecutor

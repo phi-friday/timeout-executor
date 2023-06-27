@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-import importlib
+from importlib import import_module
+from importlib.util import find_spec
 from typing import TYPE_CHECKING, Literal
 
 from timeout_executor.log import logger
@@ -29,11 +30,21 @@ def monkey_patch(backend: BackendType, pickler: PicklerType | None) -> None:
 
 
 def _import_backend(backend: BackendType) -> BackendModule:
-    return importlib.import_module(f"._{backend}", __package__)  # type: ignore
+    name = f".backend._{backend}"
+    spec = find_spec(name, __package__)
+    if spec is None:
+        error_msg = f"invalid backend: {backend}"
+        raise ImportError(error_msg)
+    return import_module(name, __package__)  # type: ignore
 
 
 def _import_pickler(pickler: PicklerType) -> PicklerModule:
-    return importlib.import_module(f"._{pickler}", __package__)  # type: ignore
+    name = f"._{pickler}"
+    spec = find_spec(name, __package__)
+    if spec is None:
+        error_msg = f"invalid pickler: {pickler}"
+        raise ImportError(error_msg)
+    return import_module(name, __package__)  # type: ignore
 
 
 def _validate_pickler(

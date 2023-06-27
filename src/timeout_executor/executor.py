@@ -26,9 +26,9 @@ if TYPE_CHECKING:
 
     from anyio.abc import ObjectSendStream
 
-    from timeout_executor.concurrent.futures import _billiard as billiard_future
-    from timeout_executor.concurrent.futures import _loky as loky_future
-    from timeout_executor.concurrent.futures import (
+    from timeout_executor.concurrent.futures.backend import _billiard as billiard_future
+    from timeout_executor.concurrent.futures.backend import _loky as loky_future
+    from timeout_executor.concurrent.futures.backend import (
         _multiprocessing as multiprocessing_future,
     )
     from timeout_executor.concurrent.main import BackendType
