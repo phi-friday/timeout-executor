@@ -1,10 +1,15 @@
 from __future__ import annotations
 
-from typing import Any
+import sys
+from textwrap import indent
+from typing import TYPE_CHECKING, Any, Sequence
 
 from typing_extensions import Self, override
 
-__all__ = ["ExtraError"]
+if sys.version_info < (3, 11):
+    from exceptiongroup import ExceptionGroup
+
+__all__ = ["ExtraError", "ImportErrors"]
 
 
 class ExtraError(ImportError):
@@ -42,3 +47,29 @@ class ExtraError(ImportError):
             extra error
         """
         return cls(name=error.name, path=error.path, extra=extra)
+
+
+class ImportErrors(ExceptionGroup[ImportError]):
+    if TYPE_CHECKING:
+
+        @override
+        def __new__(cls, __message: str, __exceptions: Sequence[ImportError]) -> Self:
+            ...
+
+        exceptions: Sequence[ImportError]
+
+    def render(self, depth: int = 0) -> str:  # noqa: D102
+        msg = str(self)
+        if depth:
+            msg = indent(msg, prefix="    ")
+        return msg
+
+    def __str__(self) -> str:
+        return (
+            super().__str__()
+            + "\n"
+            + indent(
+                "\n".join(f"[{error.name}] {error!s}" for error in self.exceptions),
+                prefix="    ",
+            )
+        )
