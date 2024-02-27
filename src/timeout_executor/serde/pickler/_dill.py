@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import copyreg
 import io
-from typing import Any, Callable, ClassVar, TypeVar
+from typing import Any, Callable, ClassVar
+
+from typing_extensions import TypeVar
 
 from timeout_executor.exception import ExtraError
 from timeout_executor.serde.base import Pickler as BasePickler
@@ -13,7 +15,7 @@ except ImportError as exc:
     error = ExtraError.from_import_error(exc, extra="dill")
     raise error from exc
 
-ValueT = TypeVar("ValueT")
+ValueT = TypeVar("ValueT", infer_variance=True)
 
 __all__ = ["Pickler"]
 

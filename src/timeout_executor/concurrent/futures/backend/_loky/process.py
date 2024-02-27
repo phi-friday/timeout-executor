@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Generic
+
+from typing_extensions import TypeVar
 
 from timeout_executor.exception import ExtraError
 
@@ -27,7 +29,7 @@ if TYPE_CHECKING:
     from typing_extensions import ParamSpec, override
 
     _P = ParamSpec("_P")
-    _T = TypeVar("_T")
+    _T = TypeVar("_T", infer_variance=True)
 
     class Future(LockyFuture, Generic[_T]):
         @override

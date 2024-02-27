@@ -27,9 +27,9 @@ from multiprocessing import util as mp_util
 from multiprocessing.connection import wait as mp_wait
 from multiprocessing.queues import Queue
 from traceback import format_exception
-from typing import TYPE_CHECKING, Any, Callable, Iterable, Iterator, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Iterator, Union
 
-from typing_extensions import ParamSpec, TypeAlias, override
+from typing_extensions import ParamSpec, TypeAlias, TypeVar, override
 
 if TYPE_CHECKING:
     from concurrent.futures import Future
@@ -50,7 +50,7 @@ if TYPE_CHECKING:
     ]
 
     _P = ParamSpec("_P")
-    _T = TypeVar("_T")
+    _T = TypeVar("_T", infer_variance=True)
 
 
 class _ThreadWakeup:

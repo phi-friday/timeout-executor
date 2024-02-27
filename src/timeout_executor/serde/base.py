@@ -7,9 +7,10 @@ from typing import (
     ClassVar,
     Protocol,
     Type,
-    TypeVar,
     runtime_checkable,
 )
+
+from typing_extensions import TypeVar
 
 if TYPE_CHECKING:
     import io
@@ -29,7 +30,7 @@ if TYPE_CHECKING:
         Pickler: type[Pickler]
 
 
-ValueT = TypeVar("ValueT")
+ValueT = TypeVar("ValueT", infer_variance=True)
 
 __all__ = ["Pickler", "Monkey", "UnMonkey", "BackendModule", "PicklerModule"]
 

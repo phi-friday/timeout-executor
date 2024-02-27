@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from typing import Any, Generic, NoReturn, TypeVar, final
+from typing import Any, Generic, NoReturn, final
 
-ValueT = TypeVar("ValueT")
+from typing_extensions import TypeVar
+
+ValueT = TypeVar("ValueT", infer_variance=True)
 
 __all__ = ["ReadOnly"]
 

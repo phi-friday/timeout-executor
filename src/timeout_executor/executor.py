@@ -4,19 +4,10 @@ import asyncio
 from concurrent.futures import wait
 from contextlib import contextmanager
 from functools import partial
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Coroutine,
-    Generator,
-    Literal,
-    TypeVar,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Callable, Coroutine, Generator, Literal, overload
 
 import anyio
-from typing_extensions import ParamSpec
+from typing_extensions import ParamSpec, TypeVar
 
 from timeout_executor.concurrent import get_executor_backend
 from timeout_executor.log import logger
@@ -39,7 +30,7 @@ if TYPE_CHECKING:
 __all__ = ["TimeoutExecutor", "get_executor"]
 
 ParamT = ParamSpec("ParamT")
-ResultT = TypeVar("ResultT")
+ResultT = TypeVar("ResultT", infer_variance=True)
 
 
 class TimeoutExecutor:

@@ -23,18 +23,9 @@ from concurrent.futures.process import (
 )
 from functools import partial
 from traceback import format_exception
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Iterable,
-    Iterator,
-    TypeVar,
-    Union,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Iterator, Union, cast
 
-from typing_extensions import ParamSpec, TypeAlias, override
+from typing_extensions import ParamSpec, TypeAlias, TypeVar, override
 
 from timeout_executor.exception import ExtraError
 
@@ -72,7 +63,7 @@ if TYPE_CHECKING:
         from billiard.connection import PipeConnection as Connection  # type: ignore
 
     _P = ParamSpec("_P")
-    _T = TypeVar("_T")
+    _T = TypeVar("_T", infer_variance=True)
 
 
 class _ThreadWakeup:
