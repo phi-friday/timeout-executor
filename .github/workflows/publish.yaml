@@ -19,12 +19,6 @@ jobs:
           token: "${{ secrets.GITHUB_TOKEN }}"
           fetch-depth: 0
 
-      - name: Install poetry
-        run: |
-          pipx install poetry
-          poetry config installer.modern-installation false
-          poetry config virtualenvs.in-project true
-
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
