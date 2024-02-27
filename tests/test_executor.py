@@ -18,7 +18,7 @@ from timeout_executor.concurrent.main import BackendType
 from timeout_executor.serde.main import PicklerType
 
 if sys.version_info < (3, 11):
-    from exceptiongroup import ExceptionGroup
+    from exceptiongroup import ExceptionGroup  # type: ignore
 
 TEST_SIZE = 3
 
