@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import sys
 import time
 from collections import deque
 from functools import partial
@@ -15,6 +16,9 @@ from anyio.abc import ObjectSendStream
 from timeout_executor import TimeoutExecutor
 from timeout_executor.concurrent.main import BackendType
 from timeout_executor.serde.main import PicklerType
+
+if sys.version_info < (3, 11):
+    from exceptiongroup import ExceptionGroup
 
 TEST_SIZE = 3
 
@@ -162,6 +166,9 @@ class TestExecutorAsync:
         await executor.apply_async(asyncio.sleep, 0.5)
         try:
             await executor.apply_async(asyncio.sleep, 1.5)
+        except ExceptionGroup as exc_group:
+            for exc in exc_group.exceptions:
+                assert isinstance(exc, TimeoutError)
         except Exception as exc:  # noqa: BLE001
             assert isinstance(exc, TimeoutError)  # noqa: PT017
         else:
