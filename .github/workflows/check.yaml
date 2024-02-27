@@ -11,33 +11,38 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - name: Install poetry
-        run: |
-          pipx install poetry
-          poetry config installer.modern-installation false
-          poetry config virtualenvs.in-project true
+      - name: Install rye
+        uses: eifinger/setup-rye@v1
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+      - name: Load cached venv
+        id: cached-venv-dependencies
+        uses: actions/cache@v4
         with:
-          python-version: ${{ matrix.python-version }}
-          cache: poetry
-          cache-dependency-path: |
-            **/poetry.lock
+          path: .venv
+          key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/pyproject.toml') }}
 
       - name: Install dependencies
+        if: steps.cached-venv-dependencies.outputs.cache-hit != 'true'
         run: |
-          poetry install --all-extras --with=dev
+          rye pin cpython@${{ matrix.python-version }}
+          rye sync --all-features
+
+      - name: Load cached pre-commit
+        id: cached-pre-commit-dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: precommit-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('.pre-commit-config.yaml') }}
 
       - name: Code checks
         run: |
-          poetry run pre-commit run --all-files --show-diff-on-failure
+          rye run pre-commit run --all-files --show-diff-on-failure
 
       - name: Test with pytest
         run: |
-          poetry run pytest
+          rye run pytest
