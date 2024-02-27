@@ -60,10 +60,10 @@ class TestExecutorSync:
 
     @pytest.mark.parametrize(
         ("backend", "pickler", "x"),
-        product(
+        product(  # pyright: ignore[reportCallIssue]
             ("billiard", "multiprocessing", "loky"),
             ("dill", "cloudpickle"),
-            range(TEST_SIZE),
+            range(TEST_SIZE),  # pyright: ignore[reportArgumentType]
         ),
     )
     def test_apply_lambda(self, backend: BackendType, pickler: PicklerType, x: int):
@@ -169,10 +169,10 @@ class TestExecutorAsync:
 
     @pytest.mark.parametrize(
         ("backend", "pickler", "x"),
-        product(
+        product(  #  pyright: ignore[reportCallIssue]
             ("billiard", "multiprocessing", "loky"),
             ("dill", "cloudpickle"),
-            range(TEST_SIZE),
+            range(TEST_SIZE),  # pyright: ignore[reportArgumentType]
         ),
     )
     async def test_apply_lambda(

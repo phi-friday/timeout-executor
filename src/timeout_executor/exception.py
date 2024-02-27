@@ -22,7 +22,7 @@ class ExtraError(ImportError):  # noqa: D101
 
     @property
     @override
-    def msg(self) -> str:
+    def msg(self) -> str:  # pyright: ignore[reportIncompatibleVariableOverride]
         return f"install extra first: {self._extra}"
 
     def __str__(self) -> str:
@@ -53,7 +53,7 @@ class ImportErrors(ExceptionGroup[ImportError]):  # noqa: D101
             cls, __message: str, __exceptions: Sequence[ImportError]
         ) -> Self: ...
 
-        exceptions: Sequence[ImportError]
+        exceptions: Sequence[ImportError]  # pyright: ignore[reportIncompatibleMethodOverride]
 
     def render(self, depth: int = 0) -> str:  # noqa: D102
         msg = str(self)
