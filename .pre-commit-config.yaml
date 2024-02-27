@@ -1,16 +1,16 @@
 repos:
   - hooks:
       - id: ruff
-        name: ruff
-    repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.0.282
+        name: ruff-lint
+    repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.2.2
 
   - hooks:
-      - id: black
-        args:
-          - "--check"
-    rev: 23.7.0
-    repo: https://github.com/psf/black
+      - id: ruff-format
+        name: ruff-format
+        args: [--check]
+    repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.2.2
 
   - hooks:
       - id: pyright
@@ -20,4 +20,4 @@ repos:
         args:
           - "--pythonpath=.venv/bin/python"
     repo: https://github.com/RobertCraigie/pyright-python
-    rev: v1.1.320
+    rev: v1.1.351

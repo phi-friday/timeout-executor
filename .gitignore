@@ -163,3 +163,7 @@ cython_debug/
 
 # asdf
 .tool-versions
+
+# rye
+requirements.lock
+requirements-dev.lock

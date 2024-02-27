@@ -1,47 +1,82 @@
-[tool.poetry]
+[project]
 name = "timeout-executor"
-version = "0.0.0"                                             # will be replaced
+version = "0.0.0"
 description = "execute with timeout"
-authors = ["phi <phi.friday@gmail.com>"]
+authors = [
+    { name = "phi", email = "phi.friday@gmail.com" }
+]
 readme = "README.md"
-license = "MIT License"
-homepage = "https://github.com/phi-friday/timeout-executor"
-repository = "https://github.com/phi-friday/timeout-executor"
-packages = [{ include = "timeout_executor", from = "src" }]
+license = { file = "LICENSE" }
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: Implementation :: CPython",
+]
+requires-python = ">= 3.8"
+dependencies = [
+    "anyio>=4.3.0",
+    "typing-extensions>=4.10.0",
+]
 
-[tool.poetry.dependencies]
-python = ">=3.8"
-anyio = ">=3.7.0"
-typing-extensions = ">=4.6.3"
-billiard = { version = ">=4.0.0", optional = true }
-dill = { version = ">=0.3.6", optional = true }
-cloudpickle = { version = ">=2.2.1", optional = true }
-loky = { version = "^3.4.0", optional = true }
-psutil = { version = "^5.9.5", optional = true }
-exceptiongroup = { version = "^1.1.1", python = "<3.11" }
+[project.urls]
+Repository = "https://github.com/phi-friday/timeout-executor"
 
-[tool.poetry.extras]
-all = ['billiard', "loky", "psutil", 'dill', 'cloudpickle']
-billiard = ['billiard', 'dill']
-loky = ["loky", "psutil", "cloudpickle"]
-dill = ['dill']
-cloudpickle = ['cloudpickle']
+[project.optional-dependencies]
+all = [
+    "billiard>=4.2.0",
+    "cloudpickle>=3.0.0",
+    "dill>=0.3.8",
+    "loky>=3.4.1",
+    "psutil>=5.9.8",
+]
+billiard = [
+    "billiard>=4.2.0",
+    "dill>=0.3.8",
+]
+loky = [
+    "cloudpickle>=3.0.0",
+    "loky>=3.4.1",
+    "psutil>=5.9.8",
+]
+dill = [
+    "dill>=0.3.8",
+]
+cloudpickle = [
+    "cloudpickle>=3.0.0",
+]
 
-[tool.poetry.group.dev.dependencies]
-ruff = "0.0.282"
-black = "23.7.0"
-ipykernel = "^6.23.3"
-pytest = "^7.4.0"
-pytest-asyncio = "^0.21.0"
-pre-commit = "^3.3.3"
-pyyaml = ">6.0.0"          # cython error
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.rye]
+managed = true
+dev-dependencies = [
+    "ruff==0.2.2",
+    "ipykernel>=6.29.3",
+    "pre-commit>=3.5.0",
+    "pytest>=8.0.2",
+    "pytest-asyncio>=0.23.5",
+    "pyyaml>=6.0.1",
+]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/timeout_executor"]
+
 
 [tool.ruff]
 target-version = "py38"
+
+[tool.ruff.lint]
 select = ["ALL"]
 fixable = [
     "UP",
@@ -54,9 +89,6 @@ fixable = [
     "E713",   # not-in-test
     "E714",   # not-is-test
     "I001",   # unsorted-imports
-    "COM812", # trailing-comma-missing
-    "Q000",   # bad-quotes-inline-string
-    "Q001",   # bad-quotes-multiline-string
     "UP037",  # quoted-annotation
     "W293",   # blank-line-with-whitespace
     "RSE102", # unnecessary-paren-on-raise-exception
@@ -98,10 +130,25 @@ ignore = [
     "D105",   # undocumented-magic-method
     "TD",     # flake8-todos
     "FIX",    # flake8-fixme
-    "D101",   # "undocumented-public-class"
+    "D413",   # blank-line-after-last-section 
+    # ruff format
+    "W191",   # tab-indentation
+    "E111",   # indentation-with-invalid-multiple
+    "E114",   # indentation-with-invalid-multiple-comment
+    "E117",   # over-indented
+    "D206",   # indent-with-spaces
+    "D300",   # triple-single-quotes
+    "Q000",   # bad-quotes-inline-string
+    "Q001",   # bad-quotes-multiline-string
+    "Q002",   # bad-quotes-docstring
+    "Q003",   # avoidable-escaped-quote
+    "COM812", # missing-trailing-comma
+    "COM819", # prohibited-trailing-comma
+    "ISC001", # single-line-implicit-string-concatenation
+    "ISC002", # multi-line-implicit-string-concatenation
 ]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "./tests/**/*.py" = [
     "TCH001",
     "TCH002",
@@ -117,9 +164,19 @@ ignore = [
     "PLR2004",
 ]
 
-[tool.ruff.isort]
+[tool.ruff.format]
+indent-style = "space"
+preview = true
+quote-style = "double"
+skip-magic-trailing-comma = true
+
+[tool.ruff.lint.isort]
 known-local-folder = ["timeout_executor"]
 required-imports = ["from __future__ import annotations"]
+# ruff format
+force-single-line = false
+force-wrap-aliases = false
+split-on-trailing-comma = false
 
 [tool.pyright]
 include = ["src", "tests"]
