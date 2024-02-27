@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
     from timeout_executor.serde.main import PicklerType
 
-    class BackendModule(ModuleType):
+    class BackendModule(ModuleType):  # noqa: D101
         unpatch: frozenset[PicklerType]
         replace: dict[PicklerType, PicklerType]
         order: tuple[PicklerType]
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
         monkey_patch: Monkey
         monkey_unpatch: UnMonkey
 
-    class PicklerModule(ModuleType):
+    class PicklerModule(ModuleType):  # noqa: D101
         Pickler: type[Pickler]
 
 
@@ -35,7 +35,7 @@ __all__ = ["Pickler", "Monkey", "UnMonkey", "BackendModule", "PicklerModule"]
 
 
 @runtime_checkable
-class Pickler(Protocol):
+class Pickler(Protocol):  # noqa: D101
     _extra_reducers: ClassVar[dict[type[Any], Callable[[Any], Any]]]
     _copyreg_dispatch_table: ClassVar[dict[type[Any], Callable[[Any], Any]]]
 
@@ -49,19 +49,13 @@ class Pickler(Protocol):
 
     @classmethod
     def dumps(  # noqa: D102
-        cls,
-        obj: Any,
-        protocol: int | None = None,
-    ) -> memoryview:
-        ...
+        cls, obj: Any, protocol: int | None = None
+    ) -> memoryview: ...
 
     @classmethod
     def loadbuf(  # noqa: D102
-        cls,
-        buf: io.BytesIO,
-        protocol: int | None = None,
-    ) -> Any:
-        ...
+        cls, buf: io.BytesIO, protocol: int | None = None
+    ) -> Any: ...
 
     loads: Callable[..., Any]
 

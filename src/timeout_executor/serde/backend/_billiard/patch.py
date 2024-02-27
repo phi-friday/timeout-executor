@@ -35,10 +35,9 @@ def monkey_patch(name: str, pickler: type[Pickler]) -> None:
             error = ExtraError.from_import_error(exc, extra="billiard")
             raise error from exc
 
-        origin_register: dict[
-            type[Any],
-            Callable[[Any], Any],
-        ] = reduction.ForkingPickler._extra_reducers  # noqa: SLF001 # type: ignore
+        origin_register: dict[type[Any], Callable[[Any], Any]] = (
+            reduction.ForkingPickler._extra_reducers  # noqa: SLF001 # pyright: ignore[reportAttributeAccessIssue]
+        )  # type: ignore
         reduction.ForkingPickler = pickler
         reduction.register = pickler.register
         pickler._extra_reducers.update(origin_register)  # noqa: SLF001

@@ -48,9 +48,7 @@ def _import_pickler(pickler: PicklerType) -> PicklerModule:
 
 
 def _validate_pickler(
-    backend_name: BackendType,
-    backend: BackendModule,
-    pickler: PicklerType | None,
+    backend_name: BackendType, backend: BackendModule, pickler: PicklerType | None
 ) -> PicklerType:
     if not pickler:
         logger.debug(
@@ -71,9 +69,7 @@ def _validate_pickler(
 
 
 def _try_import_pickler(
-    backend_name: BackendType,
-    backend: BackendModule,
-    pickler: PicklerType | None,
+    backend_name: BackendType, backend: BackendModule, pickler: PicklerType | None
 ) -> tuple[PicklerType, PicklerModule | None]:
     pickler = _validate_pickler(backend_name, backend, pickler)
     if pickler in backend.unpatch:
@@ -95,7 +91,7 @@ def _try_import_pickler(
     for sub_pickler in (pickler, *pickler_queue):
         try:
             pickler_module = _import_pickler(sub_pickler)
-        except ImportError as exc:
+        except ImportError as exc:  # noqa: PERF203
             errors = (*errors, exc)
         else:
             return sub_pickler, pickler_module

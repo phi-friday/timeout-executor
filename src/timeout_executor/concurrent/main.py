@@ -18,31 +18,28 @@ DEFAULT_BACKEND = "multiprocessing"
 @overload
 def get_executor_backend(
     backend: Literal["multiprocessing"] | None = ...,
-) -> type[multiprocessing_future.ProcessPoolExecutor]:
-    ...
+) -> type[multiprocessing_future.ProcessPoolExecutor]: ...
 
 
 @overload
 def get_executor_backend(
     backend: Literal["billiard"] = ...,
-) -> type[billiard_future.ProcessPoolExecutor]:
-    ...
+) -> type[billiard_future.ProcessPoolExecutor]: ...
 
 
 @overload
 def get_executor_backend(
     backend: Literal["loky"] = ...,
-) -> type[loky_future.ProcessPoolExecutor]:
-    ...
+) -> type[loky_future.ProcessPoolExecutor]: ...
 
 
 def get_executor_backend(
     backend: BackendType | None = None,
-) -> (
-    type[billiard_future.ProcessPoolExecutor]
-    | type[multiprocessing_future.ProcessPoolExecutor]
-    | type[loky_future.ProcessPoolExecutor]
-):
+) -> type[
+    billiard_future.ProcessPoolExecutor
+    | multiprocessing_future.ProcessPoolExecutor
+    | loky_future.ProcessPoolExecutor
+]:
     """get pool executor
 
     Args:

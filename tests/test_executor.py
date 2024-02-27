@@ -44,7 +44,7 @@ class TestExecutorSync:
     def test_apply_init(self, x: int):
         executor = TimeoutExecutor(1)
         name = f"x_{x}"
-        alter_left, alter_right = f"x_{x-1}", f"x_{x+1}"
+        alter_left, alter_right = f"x_{x - 1}", f"x_{x + 1}"
         executor.set_init(sample_init_set, **{name: x})
         result = executor.apply(sample_init_get, name, alter_left, alter_right)
         assert isinstance(result, dict)
@@ -146,13 +146,10 @@ class TestExecutorAsync:
     async def test_apply_init(self, x: int):
         executor = TimeoutExecutor(1)
         name = f"x_{x}"
-        alter_left, alter_right = f"x_{x-1}", f"x_{x+1}"
+        alter_left, alter_right = f"x_{x - 1}", f"x_{x + 1}"
         executor.set_init(sample_init_set, **{name: x})
         result = await executor.apply_async(
-            sample_init_async_get,
-            name,
-            alter_left,
-            alter_right,
+            sample_init_async_get, name, alter_left, alter_right
         )
         assert isinstance(result, dict)
         assert result
@@ -179,10 +176,7 @@ class TestExecutorAsync:
         ),
     )
     async def test_apply_lambda(
-        self,
-        backend: BackendType,
-        pickler: PicklerType,
-        x: int,
+        self, backend: BackendType, pickler: PicklerType, x: int
     ):
         executor = TimeoutExecutor(1, backend, pickler=pickler)
 
@@ -215,8 +209,7 @@ def sample_func(*args: Any, **kwargs: Any) -> tuple[tuple[Any, ...], dict[str, A
 
 
 async def sample_async_func(
-    *args: Any,
-    **kwargs: Any,
+    *args: Any, **kwargs: Any
 ) -> tuple[tuple[Any, ...], dict[str, Any]]:
     await asyncio.sleep(0.1)
     return sample_func(*args, **kwargs)
@@ -241,10 +234,7 @@ async def sample_init_async_get(*names: str) -> dict[str, Any]:
 
 
 async def send_result(
-    stream: ObjectSendStream[Any],
-    func: Callable[..., Any],
-    *args: Any,
-    **kwargs: Any,
+    stream: ObjectSendStream[Any], func: Callable[..., Any], *args: Any, **kwargs: Any
 ) -> None:
     async with stream:
         result = await func(*args, **kwargs)

@@ -81,8 +81,7 @@ class TimeoutExecutor:
         """process pool executor"""
         if self._executor is None:
             self._executor = get_executor(self._select[0], self._select[1])(
-                1,
-                initializer=self._partial_init(),
+                1, initializer=self._partial_init()
             )
         return self._executor
 
@@ -134,10 +133,7 @@ class TimeoutExecutor:
         return partial(self._init, *self._args, **self._kwargs)
 
     def set_init(
-        self,
-        init: Callable[ParamT, Any],
-        *args: ParamT.args,
-        **kwargs: ParamT.kwargs,
+        self, init: Callable[ParamT, Any], *args: ParamT.args, **kwargs: ParamT.kwargs
     ) -> None:
         """set init func
 
@@ -200,11 +196,7 @@ class TimeoutExecutor:
         with self._enter() as pool:
             try:
                 future = pool.submit(
-                    _async_run,
-                    func,
-                    *args,
-                    _timeout=self.timeout,
-                    **kwargs,
+                    _async_run, func, *args, _timeout=self.timeout, **kwargs
                 )
                 coro = asyncio.wrap_future(future)
                 return await coro
@@ -215,36 +207,29 @@ class TimeoutExecutor:
 
 @overload
 def get_executor(
-    backend: Literal["multiprocessing"] | None = ...,
-    pickler: PicklerType | None = ...,
-) -> type[multiprocessing_future.ProcessPoolExecutor]:
-    ...
+    backend: Literal["multiprocessing"] | None = ..., pickler: PicklerType | None = ...
+) -> type[multiprocessing_future.ProcessPoolExecutor]: ...
 
 
 @overload
 def get_executor(
-    backend: Literal["billiard"] = ...,
-    pickler: PicklerType | None = ...,
-) -> type[billiard_future.ProcessPoolExecutor]:
-    ...
+    backend: Literal["billiard"] = ..., pickler: PicklerType | None = ...
+) -> type[billiard_future.ProcessPoolExecutor]: ...
 
 
 @overload
 def get_executor(
-    backend: Literal["loky"] = ...,
-    pickler: PicklerType | None = ...,
-) -> type[loky_future.ProcessPoolExecutor]:
-    ...
+    backend: Literal["loky"] = ..., pickler: PicklerType | None = ...
+) -> type[loky_future.ProcessPoolExecutor]: ...
 
 
 def get_executor(
-    backend: BackendType | None = None,
-    pickler: PicklerType | None = None,
-) -> (
-    type[billiard_future.ProcessPoolExecutor]
-    | type[multiprocessing_future.ProcessPoolExecutor]
-    | type[loky_future.ProcessPoolExecutor]
-):
+    backend: BackendType | None = None, pickler: PicklerType | None = None
+) -> type[
+    billiard_future.ProcessPoolExecutor
+    | multiprocessing_future.ProcessPoolExecutor
+    | loky_future.ProcessPoolExecutor
+]:
     """get pool executor
 
     Args:
@@ -261,25 +246,19 @@ def get_executor(
 
 
 def _async_run(
-    func: Callable[..., Any],
-    *args: Any,
-    _timeout: float,
-    **kwargs: Any,
+    func: Callable[..., Any], *args: Any, _timeout: float, **kwargs: Any
 ) -> Any:
     return asyncio.run(
-        _async_run_with_timeout(func, *args, _timeout=_timeout, **kwargs),
+        _async_run_with_timeout(func, *args, _timeout=_timeout, **kwargs)
     )
 
 
 async def _async_run_with_timeout(
-    func: Callable[..., Any],
-    *args: Any,
-    _timeout: float,
-    **kwargs: Any,
+    func: Callable[..., Any], *args: Any, _timeout: float, **kwargs: Any
 ) -> Any:
     send, recv = anyio.create_memory_object_stream()
     async with anyio.create_task_group() as task_group:
-        async with anyio.fail_after(_timeout):
+        with anyio.fail_after(_timeout):
             async with send:
                 task_group.start_soon(
                     partial(
@@ -288,7 +267,7 @@ async def _async_run_with_timeout(
                         *args,
                         _stream=send.clone(),
                         **kwargs,
-                    ),
+                    )
                 )
             async with recv:
                 result = await recv.receive()
@@ -297,10 +276,7 @@ async def _async_run_with_timeout(
 
 
 async def _async_run_with_stream(
-    func: Callable[..., Any],
-    *args: Any,
-    _stream: ObjectSendStream[Any],
-    **kwargs: Any,
+    func: Callable[..., Any], *args: Any, _stream: ObjectSendStream[Any], **kwargs: Any
 ) -> None:
     async with _stream:
         result = await func(*args, **kwargs)

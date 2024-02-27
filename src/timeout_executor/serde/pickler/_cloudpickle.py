@@ -37,11 +37,7 @@ class Pickler(cloudpickle.Pickler):
         cls._extra_reducers[type] = reduce
 
     @classmethod
-    def dumps(
-        cls,
-        obj: Any,
-        protocol: int | None = None,
-    ) -> memoryview:
+    def dumps(cls, obj: Any, protocol: int | None = None) -> memoryview:
         buf = io.BytesIO()
         cls(buf, protocol).dump(obj)
         return buf.getbuffer()

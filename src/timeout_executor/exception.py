@@ -12,14 +12,10 @@ if sys.version_info < (3, 11):
 __all__ = ["ExtraError", "ImportErrors"]
 
 
-class ExtraError(ImportError):
+class ExtraError(ImportError):  # noqa: D101
     @override
     def __init__(
-        self,
-        *args: Any,
-        name: str | None = None,
-        path: str | None = None,
-        extra: str,
+        self, *args: Any, name: str | None = None, path: str | None = None, extra: str
     ) -> None:
         super().__init__(*args, name=name, path=path)
         self._extra = extra
@@ -49,12 +45,13 @@ class ExtraError(ImportError):
         return cls(name=error.name, path=error.path, extra=extra)
 
 
-class ImportErrors(ExceptionGroup[ImportError]):
+class ImportErrors(ExceptionGroup[ImportError]):  # noqa: D101
     if TYPE_CHECKING:
 
         @override
-        def __new__(cls, __message: str, __exceptions: Sequence[ImportError]) -> Self:
-            ...
+        def __new__(
+            cls, __message: str, __exceptions: Sequence[ImportError]
+        ) -> Self: ...
 
         exceptions: Sequence[ImportError]
 

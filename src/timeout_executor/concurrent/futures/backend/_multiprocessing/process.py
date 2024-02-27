@@ -1,4 +1,5 @@
 """obtained from concurrent.futures.process"""
+
 from __future__ import annotations
 
 import multiprocessing as mp
@@ -26,15 +27,7 @@ from multiprocessing import util as mp_util
 from multiprocessing.connection import wait as mp_wait
 from multiprocessing.queues import Queue
 from traceback import format_exception
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Iterable,
-    Iterator,
-    TypeVar,
-    Union,
-)
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Iterator, TypeVar, Union
 
 from typing_extensions import ParamSpec, TypeAlias, override
 
@@ -53,10 +46,7 @@ if TYPE_CHECKING:
     from types import TracebackType
 
     Context: TypeAlias = Union[
-        SpawnContext,
-        ForkContext,
-        ForkServerContext,
-        DefaultContext,
+        SpawnContext, ForkContext, ForkServerContext, DefaultContext
     ]
 
     _P = ParamSpec("_P")
@@ -106,8 +96,7 @@ class _ExceptionWithTraceback:
     def __reduce__(
         self,
     ) -> tuple[
-        Callable[[BaseException, str], BaseException],
-        tuple[BaseException, str],
+        Callable[[BaseException, str], BaseException], tuple[BaseException, str]
     ]:
         return _rebuild_exc, (self.exc, self.tb)
 
@@ -168,7 +157,7 @@ class ProcessPoolExecutor(_base.Executor):
 
     _mp_context: Context
 
-    def __init__(  # noqa: C901, PLR0912, PLR0913
+    def __init__(  # noqa: C901, PLR0912, PLR0913, PLR0915
         self,
         max_workers: int | None = None,
         mp_context: Context | None = None,
@@ -213,11 +202,7 @@ class ProcessPoolExecutor(_base.Executor):
         if mp_context is None:
             if max_tasks_per_child is not None:
                 self._mp_context = mp.get_context("spawn")
-            elif (
-                sys.platform == "linux"
-                or sys.platform == "linux2"
-                or sys.platform == "darwin"
-            ):
+            elif sys.platform in {"linux", "linux2", "darwin"}:
                 self._mp_context = mp.get_context("fork")
             else:
                 self._mp_context = mp.get_context()
@@ -243,7 +228,7 @@ class ProcessPoolExecutor(_base.Executor):
                 raise ValueError(
                     "max_tasks_per_child is incompatible with"
                     " the 'fork' multiprocessing start method;"
-                    " supply a different mp_context.",
+                    " supply a different mp_context."
                 )
         self._max_tasks_per_child = max_tasks_per_child
         self._executor_manager_thread = None
@@ -276,9 +261,9 @@ class ProcessPoolExecutor(_base.Executor):
                 self._launch_processes()
             self._executor_manager_thread = _ExecutorManagerThread(self)
             self._executor_manager_thread.start()
-            _threads_wakeups[
-                self._executor_manager_thread
-            ] = self._executor_manager_thread_wakeup
+            _threads_wakeups[self._executor_manager_thread] = (
+                self._executor_manager_thread_wakeup
+            )
 
     def _adjust_process_count(self) -> None:
         if self._idle_worker_semaphore.acquire(blocking=False):
@@ -313,11 +298,7 @@ class ProcessPoolExecutor(_base.Executor):
 
     @override
     def submit(
-        self,
-        fn: Callable[_P, _T],
-        /,
-        *args: _P.args,
-        **kwargs: _P.kwargs,
+        self, fn: Callable[_P, _T], /, *args: _P.args, **kwargs: _P.kwargs
     ) -> Future[_T]:
         with self._shutdown_lock:
             if self._broken:
@@ -326,7 +307,7 @@ class ProcessPoolExecutor(_base.Executor):
                 raise RuntimeError("cannot schedule new futures after shutdown")
             if _global_shutdown:
                 raise RuntimeError(
-                    "cannot schedule new futures after interpreter shutdown",
+                    "cannot schedule new futures after interpreter shutdown"
                 )
 
             f = _base.Future()
@@ -344,7 +325,7 @@ class ProcessPoolExecutor(_base.Executor):
             return f
 
     @override
-    def map(  # noqa: A003
+    def map(
         self,
         fn: Callable[..., _T],
         *iterables: Iterable[Any],
@@ -362,11 +343,7 @@ class ProcessPoolExecutor(_base.Executor):
         return _chain_from_iterable_of_lists(results)
 
     @override
-    def shutdown(
-        self,
-        wait: bool = True,  # noqa: FBT001
-        cancel_futures: bool = False,  # noqa: FBT001
-    ) -> None:
+    def shutdown(self, wait: bool = True, cancel_futures: bool = False) -> None:
         with self._shutdown_lock:
             self._cancel_pending_futures = cancel_futures
             self._shutdown_thread = True
@@ -432,17 +409,11 @@ def _process_worker(
         except BaseException as e:  # noqa: BLE001
             exc = _ExceptionWithTraceback(e, e.__traceback__)
             _sendback_result(
-                result_queue,
-                call_item.work_id,
-                exception=exc,
-                exit_pid=exit_pid,
+                result_queue, call_item.work_id, exception=exc, exit_pid=exit_pid
             )
         else:
             _sendback_result(
-                result_queue,
-                call_item.work_id,
-                result=r,
-                exit_pid=exit_pid,
+                result_queue, call_item.work_id, result=r, exit_pid=exit_pid
             )
             del r
 
@@ -474,14 +445,14 @@ class _ExecutorManagerThread(threading.Thread):
             shutdown_lock: Lock = self.shutdown_lock,
         ) -> None:
             mp_util.debug(
-                "Executor collected: triggering callback for QueueManager wakeup",
+                "Executor collected: triggering callback for QueueManager wakeup"
             )
             with shutdown_lock:
                 thread_wakeup.wakeup()
 
-        self.executor_reference: weakref.ReferenceType[
-            ProcessPoolExecutor
-        ] = weakref.ref(executor, weakref_cb)
+        self.executor_reference: weakref.ReferenceType[ProcessPoolExecutor] = (
+            weakref.ref(executor, weakref_cb)
+        )
         self.processes = executor._processes  # noqa: SLF001
         self.call_queue = executor._call_queue  # noqa: SLF001
         self.result_queue = executor._result_queue  # noqa: SLF001
@@ -539,10 +510,7 @@ class _ExecutorManagerThread(threading.Thread):
                 if work_item.future.set_running_or_notify_cancel():
                     self.call_queue.put(
                         _CallItem(
-                            work_id,
-                            work_item.fn,
-                            work_item.args,
-                            work_item.kwargs,
+                            work_id, work_item.fn, work_item.args, work_item.kwargs
                         ),
                         block=True,
                     )
@@ -595,9 +563,7 @@ class _ExecutorManagerThread(threading.Thread):
     def is_shutting_down(self) -> bool:
         executor = self.executor_reference()
         return (
-            _global_shutdown
-            or executor is None
-            or executor._shutdown_thread  # noqa: SLF001
+            _global_shutdown or executor is None or executor._shutdown_thread  # noqa: SLF001
         )
 
     def terminate_broken(self, cause: list[str] | None) -> None:
@@ -614,12 +580,12 @@ class _ExecutorManagerThread(threading.Thread):
         bpe = BrokenProcessPool(
             "A process in the process pool was "
             "terminated abruptly while the future was "
-            "running or pending.",
+            "running or pending."
         )
         if cause is not None:
             bpe.__cause__ = _RemoteTraceback(f"\n'''\n{''.join(cause)}'''")
 
-        for work_id, work_item in self.pending_work_items.items():  # noqa: B007
+        for work_item in self.pending_work_items.values():
             work_item.future.set_exception(bpe)
             del work_item
         self.pending_work_items.clear()
@@ -642,7 +608,7 @@ class _ExecutorManagerThread(threading.Thread):
                 while True:
                     try:
                         self.work_ids_queue.get_nowait()
-                    except queue.Empty:
+                    except queue.Empty:  # noqa: PERF203
                         break
                 executor._cancel_pending_futures = False  # noqa: SLF001
 
@@ -654,7 +620,7 @@ class _ExecutorManagerThread(threading.Thread):
                 try:
                     self.call_queue.put_nowait(None)
                     n_sentinels_sent += 1
-                except queue.Full:
+                except queue.Full:  # noqa: PERF203
                     break
 
     def join_executor_internals(self) -> None:
@@ -680,13 +646,11 @@ def _sendback_result(
     """Safely send back the given result or exception"""
     try:
         result_queue.put(
-            _ResultItem(work_id, result=result, exception=exception, exit_pid=exit_pid),
+            _ResultItem(work_id, result=result, exception=exception, exit_pid=exit_pid)
         )
     except BaseException as e:  # noqa: BLE001
         exc = _ExceptionWithTraceback(e, e.__traceback__)
-        result_queue.put(
-            _ResultItem(work_id, exception=exc, exit_pid=exit_pid),
-        )
+        result_queue.put(_ResultItem(work_id, exception=exc, exit_pid=exit_pid))
 
 
 def _rebuild_exc(exc: BaseException, tb: str) -> BaseException:

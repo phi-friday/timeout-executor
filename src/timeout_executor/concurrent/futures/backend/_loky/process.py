@@ -32,10 +32,8 @@ if TYPE_CHECKING:
     class Future(LockyFuture, Generic[_T]):
         @override
         def add_done_callback(  # type: ignore
-            self,
-            fn: Callable[[Future[_T]], object],
-        ) -> None:
-            ...
+            self, fn: Callable[[Future[_T]], object]
+        ) -> None: ...
 
         @override
         def set_result(self, result: _T) -> None:  # type: ignore
@@ -43,7 +41,7 @@ if TYPE_CHECKING:
 
     class ProcessPoolExecutor(LockyProcessPoolExecutor):
         @override
-        def __init__(  # noqa: PLR0913
+        def __init__(
             self,
             max_workers: int | None = None,
             job_reducers: dict[type[Any], Callable[[Any], Any]] | None = None,
@@ -57,26 +55,17 @@ if TYPE_CHECKING:
             initializer: Callable[[], Any] | None = None,
             initargs: tuple[Any, ...] = (),
             env: dict[str, Any] | None = None,
-        ) -> None:
-            ...
+        ) -> None: ...
 
         @override
         def submit(  # type: ignore
-            self,
-            fn: Callable[_P, _T],
-            /,
-            *args: _P.args,
-            **kwargs: _P.kwargs,
-        ) -> Future[_T]:
-            ...
+            self, fn: Callable[_P, _T], /, *args: _P.args, **kwargs: _P.kwargs
+        ) -> Future[_T]: ...
 
         @override
         def shutdown(  # type: ignore
-            self,
-            wait: bool = True,  # noqa: FBT001
-            kill_workers: bool = False,  # noqa: FBT001
-        ) -> None:
-            ...
+            self, wait: bool = True, kill_workers: bool = False
+        ) -> None: ...
 
 else:
     ProcessPoolExecutor = LockyProcessPoolExecutor

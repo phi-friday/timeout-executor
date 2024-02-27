@@ -8,7 +8,7 @@ __all__ = ["ReadOnly"]
 
 
 @final
-class ReadOnly(Generic[ValueT]):
+class ReadOnly(Generic[ValueT]):  # noqa: D101
     def __init__(self, value: ValueT) -> None:
         self._value = value
 
@@ -24,7 +24,7 @@ class ReadOnly(Generic[ValueT]):
     def value(self) -> NoReturn:
         raise NotImplementedError
 
-    def __eq__(self, value: Any) -> bool:
+    def __eq__(self, value: object) -> bool:
         return type(value) is type(self.value) and value == self.value  # noqa: E721
 
     def force_set(self, value: ValueT) -> None:  # noqa: D102

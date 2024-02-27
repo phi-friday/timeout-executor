@@ -25,10 +25,9 @@ def monkey_patch(name: str, pickler: type[Pickler]) -> None:
         _set_origin()
         from multiprocessing import connection, queues, reduction, sharedctypes
 
-        origin_register: dict[
-            type[Any],
-            Callable[[Any], Any],
-        ] = reduction.ForkingPickler._extra_reducers  # noqa: SLF001 # type: ignore
+        origin_register: dict[type[Any], Callable[[Any], Any]] = (
+            reduction.ForkingPickler._extra_reducers  # noqa: SLF001 # pyright: ignore[reportAttributeAccessIssue]
+        )  # type: ignore
         reduction.ForkingPickler = pickler
         reduction.register = pickler.register  # type: ignore
         pickler._extra_reducers.update(origin_register)  # noqa: SLF001
