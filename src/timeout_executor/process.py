@@ -21,7 +21,7 @@ from timeout_executor.serde import SerializedError, dumps_error, loads_error
 if TYPE_CHECKING:
     from anyio.abc import Process
 
-__all__ = ["TimeoutExecutor", "execute_func", "delay_func"]
+__all__ = ["TimeoutExecutor", "apply_func", "delay_func"]
 
 P = ParamSpec("P")
 T = TypeVar("T", infer_variance=True)
@@ -124,7 +124,7 @@ class _Executor(Generic[P, T]):
             '"from timeout_executor.process import _run_in_subprocess;_run_in_subprocess()"'
         )
 
-    def execute(self, *args: P.args, **kwargs: P.kwargs) -> AsyncResult[T]:
+    def apply(self, *args: P.args, **kwargs: P.kwargs) -> AsyncResult[T]:
         input_file, output_file = self._create_temp_files()
 
         input_args = (self._func, args, kwargs, output_file)
@@ -161,7 +161,7 @@ class _Executor(Generic[P, T]):
 
 
 @overload
-def execute_func(
+def apply_func(
     timeout: float,
     func: Callable[P2, Coroutine[Any, Any, T2]],
     *args: P2.args,
@@ -170,16 +170,16 @@ def execute_func(
 
 
 @overload
-def execute_func(
+def apply_func(
     timeout: float, func: Callable[P2, T2], *args: P2.args, **kwargs: P2.kwargs
 ) -> AsyncResult[T2]: ...
 
 
-def execute_func(
+def apply_func(
     timeout: float, func: Callable[P2, Any], *args: P2.args, **kwargs: P2.kwargs
 ) -> AsyncResult[Any]:
     executor = _Executor(timeout, func)
-    return executor.execute(*args, **kwargs)
+    return executor.apply(*args, **kwargs)
 
 
 @overload
@@ -205,7 +205,7 @@ async def delay_func(
 
 
 class TimeoutExecutor(Generic[P, T]):
-    execute_func = staticmethod(execute_func)
+    apply_func = staticmethod(apply_func)
     delay_func = staticmethod(delay_func)
 
     if TYPE_CHECKING:
