@@ -14,7 +14,7 @@ from uuid import uuid4
 import anyio
 import cloudpickle
 from async_wrapper import async_to_sync, sync_to_async
-from typing_extensions import ParamSpec, TypeVar, override
+from typing_extensions import ParamSpec, TypeVar
 
 from timeout_executor.serde import SerializedError, dumps_error, loads_error
 
@@ -204,27 +204,60 @@ async def delay_func(
     return await executor.delay(*args, **kwargs)
 
 
-class TimeoutExecutor(_Executor[P, T], Generic[P, T]):
-    apply_func = staticmethod(apply_func)
-    delay_func = staticmethod(delay_func)
+class TimeoutExecutor:
+    def __init__(self, timeout: float) -> None:
+        self._timeout = timeout
 
-    async def apply_async(self, *args: P.args, **kwargs: P.kwargs) -> AsyncResult[T]:
-        return await self.delay(*args, **kwargs)
+    def _create_executor(self, func: Callable[P, T]) -> _Executor[P, T]:
+        return _Executor(self._timeout, func)
 
-    if TYPE_CHECKING:
+    @overload
+    def apply(
+        self,
+        func: Callable[P, Coroutine[Any, Any, T]],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> AsyncResult[T]: ...
+    @overload
+    def apply(
+        self, func: Callable[P, T], *args: P.args, **kwargs: P.kwargs
+    ) -> AsyncResult[T]: ...
+    def apply(
+        self, func: Callable[P, Any], *args: P.args, **kwargs: P.kwargs
+    ) -> AsyncResult[Any]:
+        return apply_func(self._timeout, func, *args, **kwargs)
 
-        @overload
-        def __new__(
-            cls, func: Callable[P, Coroutine[Any, Any, T]], timeout: float
-        ) -> TimeoutExecutor[P, T]: ...
-        @overload
-        def __new__(
-            cls, func: Callable[P, T], timeout: float
-        ) -> TimeoutExecutor[P, T]: ...
-        @override
-        def __new__(
-            cls, func: Callable[P, Any], timeout: float
-        ) -> TimeoutExecutor[P, Any]: ...
+    @overload
+    async def delay(
+        self,
+        func: Callable[P, Coroutine[Any, Any, T]],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> AsyncResult[T]: ...
+    @overload
+    async def delay(
+        self, func: Callable[P, T], *args: P.args, **kwargs: P.kwargs
+    ) -> AsyncResult[T]: ...
+    async def delay(
+        self, func: Callable[P, Any], *args: P.args, **kwargs: P.kwargs
+    ) -> AsyncResult[Any]:
+        return await delay_func(self._timeout, func, *args, **kwargs)
+
+    @overload
+    async def apply_async(
+        self,
+        func: Callable[P, Coroutine[Any, Any, T]],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> AsyncResult[T]: ...
+    @overload
+    async def apply_async(
+        self, func: Callable[P, T], *args: P.args, **kwargs: P.kwargs
+    ) -> AsyncResult[T]: ...
+    async def apply_async(
+        self, func: Callable[P, Any], *args: P.args, **kwargs: P.kwargs
+    ) -> AsyncResult[Any]:
+        return await self.delay(func, *args, **kwargs)
 
 
 def output_to_file(
