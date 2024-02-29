@@ -14,6 +14,7 @@ from typing_extensions import ParamSpec, TypeVar
 
 from timeout_executor.const import SUBPROCESS_COMMAND, TIMEOUT_EXECUTOR_INPUT_FILE
 from timeout_executor.result import AsyncResult
+from timeout_executor.terminate import Terminator
 
 __all__ = ["apply_func", "delay_func"]
 
@@ -55,6 +56,7 @@ class Executor(Generic[P, T]):
             file.write(input_args_as_bytes)
 
         command = self._command()
+        terminator = Terminator(self._timeout)
         process = subprocess.Popen(
             command,  # noqa: S603
             env={TIMEOUT_EXECUTOR_INPUT_FILE: input_file.as_posix()},
@@ -62,7 +64,8 @@ class Executor(Generic[P, T]):
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-        return AsyncResult(process, input_file, output_file, self._timeout)
+        terminator.process = process
+        return AsyncResult(process, terminator, input_file, output_file, self._timeout)
 
     async def delay(self, *args: P.args, **kwargs: P.kwargs) -> AsyncResult[T]:
         input_file, output_file = self._create_temp_files()
@@ -74,6 +77,7 @@ class Executor(Generic[P, T]):
             await file.write(input_args_as_bytes)
 
         command = self._command()
+        terminator = Terminator(self._timeout)
         process = subprocess.Popen(  # noqa: ASYNC101
             command,  # noqa: S603
             env={TIMEOUT_EXECUTOR_INPUT_FILE: input_file.as_posix()},
@@ -81,7 +85,8 @@ class Executor(Generic[P, T]):
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-        return AsyncResult(process, input_file, output_file, self._timeout)
+        terminator.process = process
+        return AsyncResult(process, terminator, input_file, output_file, self._timeout)
 
 
 @overload

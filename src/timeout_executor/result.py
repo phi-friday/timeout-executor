@@ -14,6 +14,8 @@ from timeout_executor.serde import SerializedError, loads_error
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from timeout_executor.terminate import Terminator
+
 __all__ = ["AsyncResult"]
 
 T = TypeVar("T", infer_variance=True)
@@ -26,14 +28,16 @@ class AsyncResult(Generic[T]):
 
     _result: Any
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         process: subprocess.Popen,
+        terminator: Terminator,
         input_file: Path | anyio.Path,
         output_file: Path | anyio.Path,
         timeout: float,
     ) -> None:
         self._process = process
+        self._terminator = terminator
         self._timeout = timeout
         self._result = SENTINEL
 
@@ -86,6 +90,9 @@ class AsyncResult(Generic[T]):
 
         if self._process.returncode is None:
             raise RuntimeError("process is running")
+
+        if self._terminator.is_active:
+            raise TimeoutError(self._timeout)
 
         if not await self._output.exists():
             raise FileNotFoundError(self._output)
