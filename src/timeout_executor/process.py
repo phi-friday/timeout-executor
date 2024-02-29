@@ -21,7 +21,7 @@ from timeout_executor.serde import SerializedError, dumps_error, loads_error
 if TYPE_CHECKING:
     from anyio.abc import Process
 
-__all__ = ["Executor", "execute_func", "delay_func"]
+__all__ = ["TimeoutExecutor", "execute_func", "delay_func"]
 
 P = ParamSpec("P")
 T = TypeVar("T", infer_variance=True)
@@ -204,7 +204,7 @@ async def delay_func(
     return await executor.delay(*args, **kwargs)
 
 
-class Executor(Generic[P, T]):
+class TimeoutExecutor(Generic[P, T]):
     execute_func = staticmethod(execute_func)
     delay_func = staticmethod(delay_func)
 
@@ -213,13 +213,15 @@ class Executor(Generic[P, T]):
         @overload
         def __new__(
             cls, func: Callable[P, Coroutine[Any, Any, T]], timeout: float
-        ) -> Executor[P, T]: ...
+        ) -> TimeoutExecutor[P, T]: ...
         @overload
-        def __new__(cls, func: Callable[P, T], timeout: float) -> Executor[P, T]: ...
+        def __new__(
+            cls, func: Callable[P, T], timeout: float
+        ) -> TimeoutExecutor[P, T]: ...
         @override
         def __new__(
             cls, func: Callable[P, Any], timeout: float
-        ) -> Executor[P, Any]: ...
+        ) -> TimeoutExecutor[P, Any]: ...
 
 
 def output_to_file(
