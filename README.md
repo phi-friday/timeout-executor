@@ -26,8 +26,10 @@ def sample_func() -> None:
 
 
 executor = TimeoutExecutor(1)
+result = executor.apply(sample_func)
+assert isinstance(result, AsyncResult)
 try:
-    executor.apply(sample_func)
+    value = result.result()
 except Exception as exc:
     assert isinstance(exc, TimeoutError)
 
