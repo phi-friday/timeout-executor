@@ -21,35 +21,14 @@ requires-python = ">= 3.8"
 dependencies = [
     "anyio>=4.3.0",
     "typing-extensions>=4.10.0",
+    "cloudpickle>=3.0.0",
+    "async-wrapper>=0.8.3",
+    "uvloop>=0.19.0; platform_system != 'Windows'",
+    "tblib>=3.0.0",
 ]
 
 [project.urls]
 Repository = "https://github.com/phi-friday/timeout-executor"
-
-[project.optional-dependencies]
-all = [
-    "billiard>=4.2.0",
-    "cloudpickle>=3.0.0",
-    "dill>=0.3.8",
-    "loky>=3.4.1",
-    "psutil>=5.9.8",
-]
-billiard = [
-    "billiard>=4.2.0",
-    "dill>=0.3.8",
-]
-loky = [
-    "cloudpickle>=3.0.0",
-    "loky>=3.4.1",
-    "psutil>=5.9.8",
-]
-dill = [
-    "dill>=0.3.8",
-]
-cloudpickle = [
-    "cloudpickle>=3.0.0",
-]
-
 
 [build-system]
 requires = ["hatchling"]
