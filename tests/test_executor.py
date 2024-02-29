@@ -169,4 +169,5 @@ async def sample_async_func(
     *args: Any, **kwargs: Any
 ) -> tuple[tuple[Any, ...], dict[str, Any]]:
     await asyncio.sleep(0.1)
+
     return sample_func(*args, **kwargs)
