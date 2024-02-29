@@ -9,22 +9,16 @@
 ```shell
 $ pip install timeout_executor
 # or
-$ pip install "timeout_executor[all]"
-# or
-$ pip install "timeout_executor[billiard]"
-# or
-$ pip install "timeout_executor[loky]"
-# or
-$ pip install "timeout_executor[dill]"
-# or
-$ pip install "timeout_executor[cloudpickle]"
+$ pip install "timeout_executor[uvloop]"
 ```
 
 ## how to use
 ```python
+from __future__ import annotations
+
 import time
 
-from timeout_executor import TimeoutExecutor
+from timeout_executor import AsyncResult, TimeoutExecutor
 
 
 def sample_func() -> None:
@@ -37,9 +31,11 @@ try:
 except Exception as exc:
     assert isinstance(exc, TimeoutError)
 
-executor = TimeoutExecutor(1, pickler="dill")  # or cloudpickle
+executor = TimeoutExecutor(1)
 result = executor.apply(lambda: "done")
-assert result == "done"
+assert isinstance(result, AsyncResult)
+value = result.result()
+assert value == "done"
 ```
 
 ## License

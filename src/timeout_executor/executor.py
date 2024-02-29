@@ -1,274 +1,230 @@
 from __future__ import annotations
 
-import asyncio
-from concurrent.futures import wait
-from contextlib import contextmanager
-from functools import partial
-from typing import TYPE_CHECKING, Any, Callable, Coroutine, Generator, Literal, overload
+import shlex
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+from typing import Any, Callable, Coroutine, Generic, overload
+from uuid import uuid4
 
 import anyio
+import cloudpickle
 from typing_extensions import ParamSpec, TypeVar
 
-from timeout_executor.concurrent import get_executor_backend
-from timeout_executor.log import logger
-from timeout_executor.serde import monkey_patch
-from timeout_executor.serde.lock import patch_lock
+from timeout_executor.const import SUBPROCESS_COMMAND, TIMEOUT_EXECUTOR_INPUT_FILE
+from timeout_executor.result import AsyncResult
 
-if TYPE_CHECKING:
-    from threading import RLock
+__all__ = ["TimeoutExecutor", "apply_func", "delay_func"]
 
-    from anyio.abc import ObjectSendStream
+P = ParamSpec("P")
+T = TypeVar("T", infer_variance=True)
+P2 = ParamSpec("P2")
+T2 = TypeVar("T2", infer_variance=True)
 
-    from timeout_executor.concurrent.futures.backend import _billiard as billiard_future
-    from timeout_executor.concurrent.futures.backend import _loky as loky_future
-    from timeout_executor.concurrent.futures.backend import (
-        _multiprocessing as multiprocessing_future,
-    )
-    from timeout_executor.concurrent.main import BackendType
-    from timeout_executor.serde.main import PicklerType
 
-__all__ = ["TimeoutExecutor", "get_executor"]
+class _Executor(Generic[P, T]):
+    def __init__(self, timeout: float, func: Callable[P, T]) -> None:
+        self._timeout = timeout
+        self._func = func
 
-ParamT = ParamSpec("ParamT")
-ResultT = TypeVar("ResultT", infer_variance=True)
+    def _create_temp_files(self) -> tuple[Path, Path]:
+        unique_id = uuid4()
+
+        temp_dir = Path(tempfile.gettempdir()) / "timeout_executor"
+        temp_dir.mkdir(exist_ok=True)
+
+        unique_dir = temp_dir / str(unique_id)
+        unique_dir.mkdir(exist_ok=False)
+
+        input_file = unique_dir / "input.b"
+        output_file = unique_dir / "output.b"
+
+        return input_file, output_file
+
+    @staticmethod
+    def _command() -> list[str]:
+        return shlex.split(f'{sys.executable} -c "{SUBPROCESS_COMMAND}"')
+
+    def apply(self, *args: P.args, **kwargs: P.kwargs) -> AsyncResult[T]:
+        input_file, output_file = self._create_temp_files()
+
+        input_args = (self._func, args, kwargs, output_file)
+        input_args_as_bytes = cloudpickle.dumps(input_args)
+        with input_file.open("wb+") as file:
+            file.write(input_args_as_bytes)
+
+        command = self._command()
+        process = subprocess.Popen(
+            command,  # noqa: S603
+            env={TIMEOUT_EXECUTOR_INPUT_FILE: input_file.as_posix()},
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        return AsyncResult(process, input_file, output_file, self._timeout)
+
+    async def delay(self, *args: P.args, **kwargs: P.kwargs) -> AsyncResult[T]:
+        input_file, output_file = self._create_temp_files()
+        input_file, output_file = anyio.Path(input_file), anyio.Path(output_file)
+
+        input_args = (self._func, args, kwargs, output_file)
+        input_args_as_bytes = cloudpickle.dumps(input_args)
+        async with await input_file.open("wb+") as file:
+            await file.write(input_args_as_bytes)
+
+        command = self._command()
+        process = subprocess.Popen(  # noqa: ASYNC101
+            command,  # noqa: S603
+            env={TIMEOUT_EXECUTOR_INPUT_FILE: input_file.as_posix()},
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        return AsyncResult(process, input_file, output_file, self._timeout)
+
+
+@overload
+def apply_func(
+    timeout: float,
+    func: Callable[P2, Coroutine[Any, Any, T2]],
+    *args: P2.args,
+    **kwargs: P2.kwargs,
+) -> AsyncResult[T2]: ...
+
+
+@overload
+def apply_func(
+    timeout: float, func: Callable[P2, T2], *args: P2.args, **kwargs: P2.kwargs
+) -> AsyncResult[T2]: ...
+
+
+def apply_func(
+    timeout: float, func: Callable[P2, Any], *args: P2.args, **kwargs: P2.kwargs
+) -> AsyncResult[Any]:
+    """run function with deadline
+
+    Args:
+        timeout: deadline
+        func: func(sync or async)
+
+    Returns:
+        async result container
+    """
+    executor = _Executor(timeout, func)
+    return executor.apply(*args, **kwargs)
+
+
+@overload
+async def delay_func(
+    timeout: float,
+    func: Callable[P2, Coroutine[Any, Any, T2]],
+    *args: P2.args,
+    **kwargs: P2.kwargs,
+) -> AsyncResult[T2]: ...
+
+
+@overload
+async def delay_func(
+    timeout: float, func: Callable[P2, T2], *args: P2.args, **kwargs: P2.kwargs
+) -> AsyncResult[T2]: ...
+
+
+async def delay_func(
+    timeout: float, func: Callable[P2, Any], *args: P2.args, **kwargs: P2.kwargs
+) -> AsyncResult[Any]:
+    """run function with deadline
+
+    Args:
+        timeout: deadline
+        func: func(sync or async)
+
+    Returns:
+        async result container
+    """
+    executor = _Executor(timeout, func)
+    return await executor.delay(*args, **kwargs)
 
 
 class TimeoutExecutor:
-    """exec with timeout"""
+    """timeout executor"""
 
-    def __init__(
-        self,
-        timeout: float,
-        backend: BackendType | None = None,
-        pickler: PicklerType | None = None,
-        *,
-        executor: billiard_future.ProcessPoolExecutor
-        | multiprocessing_future.ProcessPoolExecutor
-        | loky_future.ProcessPoolExecutor
-        | None = None,
-    ) -> None:
-        self.timeout = timeout
-        self._init = None
-        self._args = ()
-        self._kwargs = {}
-        self._select = (backend, pickler)
-        self._executor = executor
-        self._external_executor = executor is not None
+    def __init__(self, timeout: float) -> None:
+        self._timeout = timeout
 
-    @property
-    def lock(self) -> RLock:
-        """patch lock"""
+    def _create_executor(self, func: Callable[P, T]) -> _Executor[P, T]:
+        return _Executor(self._timeout, func)
 
-        return patch_lock
-
-    @property
-    def executor(
-        self,
-    ) -> (
-        billiard_future.ProcessPoolExecutor
-        | multiprocessing_future.ProcessPoolExecutor
-        | loky_future.ProcessPoolExecutor
-    ):
-        """process pool executor"""
-        if self._executor is None:
-            self._executor = get_executor(self._select[0], self._select[1])(
-                1, initializer=self._partial_init()
-            )
-        return self._executor
-
-    @executor.setter
-    def executor(
-        self,
-        executor: billiard_future.ProcessPoolExecutor
-        | multiprocessing_future.ProcessPoolExecutor
-        | loky_future.ProcessPoolExecutor,
-    ) -> None:
-        if self._executor is not None:
-            raise AttributeError("executor already exists")
-        self._executor = executor
-        self._external_executor = True
-
-    @executor.deleter
-    def executor(self) -> None:
-        if self._executor is None:
-            return
-        if self._executor._executor_manager_thread_wakeup is None:  # noqa: SLF001
-            self._executor = None
-            return
-        self._executor = None
-        self._external_executor = False
-
-    @contextmanager
-    def _enter(
-        self,
-    ) -> Generator[
-        billiard_future.ProcessPoolExecutor
-        | multiprocessing_future.ProcessPoolExecutor
-        | loky_future.ProcessPoolExecutor,
-        None,
-        None,
-    ]:
-        executor = self.executor
-        try:
-            yield executor
-        finally:
-            if self._external_executor:
-                logger.warning("shutdown executor yourself")
-            else:
-                executor.shutdown(False, True)  # noqa: FBT003
-            del self.executor
-
-    def _partial_init(self) -> Callable[[], Any] | None:
-        if self._init is None:
-            return None
-        return partial(self._init, *self._args, **self._kwargs)
-
-    def set_init(
-        self, init: Callable[ParamT, Any], *args: ParamT.args, **kwargs: ParamT.kwargs
-    ) -> None:
-        """set init func
-
-        Args:
-            init: pickable func
-        """
-        self._init = init
-        self._args = args
-        self._kwargs = kwargs
-
+    @overload
     def apply(
         self,
-        func: Callable[ParamT, ResultT],
-        *args: ParamT.args,
-        **kwargs: ParamT.kwargs,
-    ) -> ResultT:
-        """apply only pickable func
-
-        Both args and kwargs should be pickable.
+        func: Callable[P, Coroutine[Any, Any, T]],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> AsyncResult[T]: ...
+    @overload
+    def apply(
+        self, func: Callable[P, T], *args: P.args, **kwargs: P.kwargs
+    ) -> AsyncResult[T]: ...
+    def apply(
+        self, func: Callable[P, Any], *args: P.args, **kwargs: P.kwargs
+    ) -> AsyncResult[Any]:
+        """run function with deadline
 
         Args:
-            func: pickable func
-
-        Raises:
-            TimeoutError: When the time is exceeded
-            exc: Error during pickable func execution
+            func: func(sync or async)
 
         Returns:
-            pickable func result
+            async result container
         """
-        with self._enter() as pool:
-            future = pool.submit(func, *args, **kwargs)
-            wait([future], timeout=self.timeout)
-            if not future.done():
-                pool.shutdown(False, True)  # noqa: FBT003
-                error_msg = f"timeout > {self.timeout}s"
-                raise TimeoutError(error_msg)
-            return future.result()
+        return apply_func(self._timeout, func, *args, **kwargs)
 
+    @overload
+    async def delay(
+        self,
+        func: Callable[P, Coroutine[Any, Any, T]],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> AsyncResult[T]: ...
+    @overload
+    async def delay(
+        self, func: Callable[P, T], *args: P.args, **kwargs: P.kwargs
+    ) -> AsyncResult[T]: ...
+    async def delay(
+        self, func: Callable[P, Any], *args: P.args, **kwargs: P.kwargs
+    ) -> AsyncResult[Any]:
+        """run function with deadline
+
+        Args:
+            func: func(sync or async)
+
+        Returns:
+            async result container
+        """
+        return await delay_func(self._timeout, func, *args, **kwargs)
+
+    @overload
     async def apply_async(
         self,
-        func: Callable[ParamT, Coroutine[None, None, ResultT]],
-        *args: ParamT.args,
-        **kwargs: ParamT.kwargs,
-    ) -> ResultT:
-        """apply only pickable func
+        func: Callable[P, Coroutine[Any, Any, T]],
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> AsyncResult[T]: ...
+    @overload
+    async def apply_async(
+        self, func: Callable[P, T], *args: P.args, **kwargs: P.kwargs
+    ) -> AsyncResult[T]: ...
+    async def apply_async(
+        self, func: Callable[P, Any], *args: P.args, **kwargs: P.kwargs
+    ) -> AsyncResult[Any]:
+        """run function with deadline.
 
-        Both args and kwargs should be pickable.
+        alias of `delay`
 
         Args:
-            func: pickable func
-
-        Raises:
-            TimeoutError: When the time is exceeded
-            exc: Error during pickable func execution
+            func: func(sync or async)
 
         Returns:
-            pickable func result
+            async result container
         """
-        with self._enter() as pool:
-            try:
-                future = pool.submit(
-                    _async_run, func, *args, _timeout=self.timeout, **kwargs
-                )
-                coro = asyncio.wrap_future(future)
-                return await coro
-            except TimeoutError:
-                pool.shutdown(False, True)  # noqa: FBT003
-                raise
-
-
-@overload
-def get_executor(
-    backend: Literal["multiprocessing"] | None = ..., pickler: PicklerType | None = ...
-) -> type[multiprocessing_future.ProcessPoolExecutor]: ...
-
-
-@overload
-def get_executor(
-    backend: Literal["billiard"] = ..., pickler: PicklerType | None = ...
-) -> type[billiard_future.ProcessPoolExecutor]: ...
-
-
-@overload
-def get_executor(
-    backend: Literal["loky"] = ..., pickler: PicklerType | None = ...
-) -> type[loky_future.ProcessPoolExecutor]: ...
-
-
-def get_executor(
-    backend: BackendType | None = None, pickler: PicklerType | None = None
-) -> type[
-    billiard_future.ProcessPoolExecutor
-    | multiprocessing_future.ProcessPoolExecutor
-    | loky_future.ProcessPoolExecutor
-]:
-    """get pool executor
-
-    Args:
-        backend: backend type as string. Defaults to None.
-        pickler: pickler type as string. Defaults to None.
-
-    Returns:
-        ProcessPoolExecutor
-    """
-    backend = backend or "multiprocessing"
-    executor = get_executor_backend(backend)
-    monkey_patch(backend, pickler)
-    return executor
-
-
-def _async_run(
-    func: Callable[..., Any], *args: Any, _timeout: float, **kwargs: Any
-) -> Any:
-    return asyncio.run(
-        _async_run_with_timeout(func, *args, _timeout=_timeout, **kwargs)
-    )
-
-
-async def _async_run_with_timeout(
-    func: Callable[..., Any], *args: Any, _timeout: float, **kwargs: Any
-) -> Any:
-    send, recv = anyio.create_memory_object_stream()
-    async with anyio.create_task_group() as task_group:
-        with anyio.fail_after(_timeout):
-            async with send:
-                task_group.start_soon(
-                    partial(
-                        _async_run_with_stream,
-                        func,
-                        *args,
-                        _stream=send.clone(),
-                        **kwargs,
-                    )
-                )
-            async with recv:
-                result = await recv.receive()
-
-    return result
-
-
-async def _async_run_with_stream(
-    func: Callable[..., Any], *args: Any, _stream: ObjectSendStream[Any], **kwargs: Any
-) -> None:
-    async with _stream:
-        result = await func(*args, **kwargs)
-        await _stream.send(result)
+        return await self.delay(func, *args, **kwargs)
