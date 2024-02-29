@@ -26,16 +26,14 @@ dependencies = [
     "typing-extensions>=4.10.0",
     "cloudpickle>=3.0.0",
     "async-wrapper>=0.8.3",
-    "uvloop>=0.19.0; platform_system != 'Windows'",
     "tblib>=3.0.0",
 ]
 
 [project.urls]
 Repository = "https://github.com/phi-friday/timeout-executor"
 
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+[project.optional-dependencies]
+uvloop = ["uvloop>=0.19.0; platform_system != 'Windows'"]
 
 [tool.rye]
 managed = true
@@ -45,7 +43,12 @@ dev-dependencies = [
     "pre-commit>=3.5.0",
     "pytest>=8.0.2",
     "pyyaml>=6.0.1",
+    "trio>=0.24.0",
 ]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [tool.hatch.metadata]
 allow-direct-references = true
