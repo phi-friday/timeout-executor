@@ -22,6 +22,8 @@ SENTINEL = object()
 
 
 class AsyncResult(Generic[T]):
+    """async result container"""
+
     _result: Any
 
     def __init__(
@@ -44,10 +46,12 @@ class AsyncResult(Generic[T]):
         self._input = input_file
 
     def result(self, timeout: float | None = None) -> T:
+        """get value sync method"""
         future = async_to_sync(self.delay)
         return future(timeout)
 
     async def delay(self, timeout: float | None = None) -> T:
+        """get value async method"""
         try:
             return await self._delay(timeout)
         finally:

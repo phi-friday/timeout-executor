@@ -105,6 +105,15 @@ def apply_func(
 def apply_func(
     timeout: float, func: Callable[P2, Any], *args: P2.args, **kwargs: P2.kwargs
 ) -> AsyncResult[Any]:
+    """run function with deadline
+
+    Args:
+        timeout: deadline
+        func: func(sync or async)
+
+    Returns:
+        async result container
+    """
     executor = _Executor(timeout, func)
     return executor.apply(*args, **kwargs)
 
@@ -127,11 +136,22 @@ async def delay_func(
 async def delay_func(
     timeout: float, func: Callable[P2, Any], *args: P2.args, **kwargs: P2.kwargs
 ) -> AsyncResult[Any]:
+    """run function with deadline
+
+    Args:
+        timeout: deadline
+        func: func(sync or async)
+
+    Returns:
+        async result container
+    """
     executor = _Executor(timeout, func)
     return await executor.delay(*args, **kwargs)
 
 
 class TimeoutExecutor:
+    """timeout executor"""
+
     def __init__(self, timeout: float) -> None:
         self._timeout = timeout
 
@@ -152,6 +172,14 @@ class TimeoutExecutor:
     def apply(
         self, func: Callable[P, Any], *args: P.args, **kwargs: P.kwargs
     ) -> AsyncResult[Any]:
+        """run function with deadline
+
+        Args:
+            func: func(sync or async)
+
+        Returns:
+            async result container
+        """
         return apply_func(self._timeout, func, *args, **kwargs)
 
     @overload
@@ -168,6 +196,14 @@ class TimeoutExecutor:
     async def delay(
         self, func: Callable[P, Any], *args: P.args, **kwargs: P.kwargs
     ) -> AsyncResult[Any]:
+        """run function with deadline
+
+        Args:
+            func: func(sync or async)
+
+        Returns:
+            async result container
+        """
         return await delay_func(self._timeout, func, *args, **kwargs)
 
     @overload
@@ -184,6 +220,16 @@ class TimeoutExecutor:
     async def apply_async(
         self, func: Callable[P, Any], *args: P.args, **kwargs: P.kwargs
     ) -> AsyncResult[Any]:
+        """run function with deadline.
+
+        alias of `delay`
+
+        Args:
+            func: func(sync or async)
+
+        Returns:
+            async result container
+        """
         return await self.delay(func, *args, **kwargs)
 
 

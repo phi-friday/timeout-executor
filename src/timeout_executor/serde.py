@@ -31,6 +31,7 @@ def serialize_traceback(traceback: TracebackType) -> tuple[Any, ...]:
 
 
 def serialize_error(error: Exception) -> SerializedError:
+    """serialize exception"""
     exception = pickle_exception(error)[1:]
 
     exception_args, exception = exception[0], exception[1:]
@@ -62,6 +63,7 @@ def serialize_error(error: Exception) -> SerializedError:
 
 
 def deserialize_error(error: SerializedError) -> Exception:
+    """deserialize exception"""
     arg_exception: deque[Any] = deque(error.arg_exception)
     arg_tracebacks: deque[tuple[int, tuple[Any, ...]]] = deque(error.arg_tracebacks)
 
@@ -79,6 +81,7 @@ def deserialize_error(error: SerializedError) -> Exception:
 
 
 def dumps_error(error: Exception | SerializedError) -> bytes:
+    """serialize exception as bytes"""
     if not isinstance(error, SerializedError):
         error = serialize_error(error)
 
@@ -86,6 +89,7 @@ def dumps_error(error: Exception | SerializedError) -> bytes:
 
 
 def loads_error(error: bytes | SerializedError) -> Exception:
+    """deserialize exception from bytes"""
     if isinstance(error, bytes):
         error = cloudpickle.loads(error)
     if not isinstance(error, SerializedError):
