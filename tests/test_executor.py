@@ -65,6 +65,18 @@ class TestExecutorSync:
         assert isinstance(result, AsyncResult)
         pytest.raises(RuntimeError, result.result)
 
+    def test_terminator(self):
+        executor = TimeoutExecutor(0.5)
+
+        def temp_func() -> None:
+            time.sleep(1)
+
+        result = executor.apply(temp_func)
+        assert isinstance(result, AsyncResult)
+        pytest.raises(TimeoutError, result.result)
+
+        assert result._terminator.is_active is True  # noqa: SLF001
+
 
 @pytest.mark.anyio()
 class TestExecutorAsync:
@@ -129,7 +141,24 @@ class TestExecutorAsync:
         except Exception as exc:  # noqa: BLE001
             assert isinstance(exc, TimeoutError)  # noqa: PT017
         else:
-            raise Exception("PicklingError does not occur")  # noqa: TRY002
+            raise Exception("TimeoutError does not occur")  # noqa: TRY002
+
+    async def test_terminator(self):
+        executor = TimeoutExecutor(0.5)
+
+        async def temp_func() -> None:
+            await anyio.sleep(1)
+
+        result = await executor.delay(temp_func)
+        assert isinstance(result, AsyncResult)
+        try:
+            await result.delay()
+        except Exception as exc:  # noqa: BLE001
+            assert isinstance(exc, TimeoutError)  # noqa: PT017
+        else:
+            raise Exception("TimeoutError does not occur")  # noqa: TRY002
+
+        assert result._terminator.is_active is True  # noqa: SLF001
 
 
 def sample_func(*args: Any, **kwargs: Any) -> tuple[tuple[Any, ...], dict[str, Any]]:
