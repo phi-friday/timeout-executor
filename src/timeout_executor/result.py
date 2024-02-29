@@ -14,8 +14,6 @@ from timeout_executor.serde import SerializedError, loads_error
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from anyio.abc import Process
-
 __all__ = ["AsyncResult"]
 
 T = TypeVar("T", infer_variance=True)
@@ -28,7 +26,7 @@ class AsyncResult(Generic[T]):
 
     def __init__(
         self,
-        process: subprocess.Popen | Process,
+        process: subprocess.Popen,
         input_file: Path | anyio.Path,
         output_file: Path | anyio.Path,
         timeout: float,
@@ -96,13 +94,9 @@ class AsyncResult(Generic[T]):
 
 
 async def wait_process(
-    process: subprocess.Popen | Process, timeout: float, input_file: Path | anyio.Path
+    process: subprocess.Popen, timeout: float, input_file: Path | anyio.Path
 ) -> None:
-    if isinstance(process, subprocess.Popen):
-        wait_func = partial(sync_to_async(process.wait), timeout)
-    else:
-        wait_func = process.wait
-
+    wait_func = partial(sync_to_async(process.wait), timeout)
     if not isinstance(input_file, anyio.Path):
         input_file = anyio.Path(input_file)
 

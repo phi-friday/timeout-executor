@@ -77,8 +77,8 @@ class _Executor(Generic[P, T]):
             await file.write(input_args_as_bytes)
 
         command = self._command()
-        process = await anyio.open_process(
-            command,
+        process = subprocess.Popen(  # noqa: ASYNC101
+            command,  # noqa: S603
             env={TIMEOUT_EXECUTOR_INPUT_FILE: input_file.as_posix()},
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
