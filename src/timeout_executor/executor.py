@@ -4,8 +4,6 @@ import shlex
 import subprocess
 import sys
 import tempfile
-from functools import wraps
-from inspect import iscoroutinefunction
 from pathlib import Path
 from typing import Any, Callable, Coroutine, Generic, overload
 from uuid import uuid4
@@ -16,7 +14,6 @@ from typing_extensions import ParamSpec, TypeVar
 
 from timeout_executor.const import SUBPROCESS_COMMAND, TIMEOUT_EXECUTOR_INPUT_FILE
 from timeout_executor.result import AsyncResult
-from timeout_executor.serde import dumps_error
 
 __all__ = ["TimeoutExecutor", "apply_func", "delay_func"]
 
@@ -231,70 +228,3 @@ class TimeoutExecutor:
             async result container
         """
         return await self.delay(func, *args, **kwargs)
-
-
-def output_to_file(
-    file: Path | anyio.Path,
-) -> Callable[[Callable[P, T]], Callable[P, T]]:
-    def wrapper(func: Callable[P, Any]) -> Callable[P, Any]:
-        if iscoroutinefunction(func):
-            return _output_to_file_async(file)(func)
-        return _output_to_file_sync(file)(func)
-
-    return wrapper
-
-
-def _output_to_file_sync(
-    file: Path | anyio.Path,
-) -> Callable[[Callable[P, T]], Callable[P, T]]:
-    if isinstance(file, anyio.Path):
-        file = file._path  # noqa: SLF001
-
-    def wrapper(func: Callable[P, T]) -> Callable[P, T]:
-        @wraps(func)
-        def inner(*args: P.args, **kwargs: P.kwargs) -> T:
-            try:
-                result = func(*args, **kwargs)
-            except Exception as exc:
-                dump = dumps_error(exc)
-                raise
-            else:
-                dump = cloudpickle.dumps(result)
-                return result
-            finally:
-                with file.open("wb+") as file_io:
-                    file_io.write(dump)
-
-        return inner
-
-    return wrapper
-
-
-def _output_to_file_async(
-    file: Path | anyio.Path,
-) -> Callable[
-    [Callable[P, Coroutine[Any, Any, T]]], Callable[P, Coroutine[Any, Any, T]]
-]:
-    if isinstance(file, Path):
-        file = anyio.Path(file)
-
-    def wrapper(
-        func: Callable[P, Coroutine[Any, Any, T]],
-    ) -> Callable[P, Coroutine[Any, Any, T]]:
-        @wraps(func)
-        async def inner(*args: P.args, **kwargs: P.kwargs) -> T:
-            try:
-                result = await func(*args, **kwargs)
-            except Exception as exc:
-                dump = dumps_error(exc)
-                raise
-            else:
-                dump = cloudpickle.dumps(result)
-                return result
-            finally:
-                async with await file.open("wb+") as file_io:
-                    await file_io.write(dump)
-
-        return inner
-
-    return wrapper

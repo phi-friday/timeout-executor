@@ -54,6 +54,7 @@ def _output_to_file_sync(
     def wrapper(func: Callable[P, T]) -> Callable[P, T]:
         @wraps(func)
         def inner(*args: P.args, **kwargs: P.kwargs) -> T:
+            dump = b""
             try:
                 result = func(*args, **kwargs)
             except Exception as exc:
@@ -84,6 +85,7 @@ def _output_to_file_async(
     ) -> Callable[P, Coroutine[Any, Any, T]]:
         @wraps(func)
         async def inner(*args: P.args, **kwargs: P.kwargs) -> T:
+            dump = b""
             try:
                 result = await func(*args, **kwargs)
             except Exception as exc:
