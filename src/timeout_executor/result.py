@@ -39,8 +39,8 @@ class AsyncResult(Generic[T]):
         self._result = SENTINEL
 
         input_file, output_file = (
-            self._executor_args.output_file,
             self._executor_args.input_file,
+            self._executor_args.output_file,
         )
 
         if not isinstance(input_file, anyio.Path):
@@ -146,4 +146,4 @@ async def wait_process(
     finally:
         with anyio.CancelScope(shield=True):
             if process.returncode is not None:
-                await input_file.unlink(missing_ok=False)
+                await input_file.unlink(missing_ok=True)

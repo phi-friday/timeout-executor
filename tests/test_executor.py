@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import time
 from itertools import product
 from typing import Any
@@ -119,7 +118,7 @@ class TestExecutorAsync:
         executor = TimeoutExecutor(1)
 
         async def lambdalike() -> int:
-            await asyncio.sleep(0.1)
+            await anyio.sleep(0.1)
             return x
 
         result = await executor.delay(lambdalike)
@@ -132,7 +131,7 @@ class TestExecutorAsync:
         executor = TimeoutExecutor(1)
 
         async def lambdalike() -> int:
-            await asyncio.sleep(10)
+            await anyio.sleep(10)
             raise RuntimeError("error")
 
         result = await executor.delay(lambdalike)
@@ -168,6 +167,6 @@ def sample_func(*args: Any, **kwargs: Any) -> tuple[tuple[Any, ...], dict[str, A
 async def sample_async_func(
     *args: Any, **kwargs: Any
 ) -> tuple[tuple[Any, ...], dict[str, Any]]:
-    await asyncio.sleep(0.1)
+    await anyio.sleep(0.1)
 
     return sample_func(*args, **kwargs)
