@@ -204,9 +204,12 @@ async def delay_func(
     return await executor.delay(*args, **kwargs)
 
 
-class TimeoutExecutor(Generic[P, T]):
+class TimeoutExecutor(_Executor[P, T], Generic[P, T]):
     apply_func = staticmethod(apply_func)
     delay_func = staticmethod(delay_func)
+
+    async def apply_async(self, *args: P.args, **kwargs: P.kwargs) -> AsyncResult[T]:
+        return await self.delay(*args, **kwargs)
 
     if TYPE_CHECKING:
 
