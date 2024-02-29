@@ -60,7 +60,7 @@ class AsyncResult(Generic[T]):
             return await self._delay(timeout)
         finally:
             with anyio.CancelScope(shield=True):
-                self._process.terminate()
+                self._terminator.close()
 
     async def _delay(self, timeout: float | None) -> T:
         if self._process.returncode is not None:

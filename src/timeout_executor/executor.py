@@ -60,9 +60,9 @@ class Executor(Generic[P, T]):
         process = subprocess.Popen(
             command,  # noqa: S603
             env={TIMEOUT_EXECUTOR_INPUT_FILE: input_file.as_posix()},
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
         )
         terminator.process = process
         return AsyncResult(process, terminator, input_file, output_file, self._timeout)
@@ -81,9 +81,9 @@ class Executor(Generic[P, T]):
         process = subprocess.Popen(  # noqa: ASYNC101
             command,  # noqa: S603
             env={TIMEOUT_EXECUTOR_INPUT_FILE: input_file.as_posix()},
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
         )
         terminator.process = process
         return AsyncResult(process, terminator, input_file, output_file, self._timeout)
