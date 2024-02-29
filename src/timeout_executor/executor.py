@@ -4,20 +4,27 @@ import shlex
 import subprocess
 import sys
 import tempfile
+from collections import deque
+from contextlib import suppress
 from inspect import isclass
+from itertools import chain
 from pathlib import Path
 from types import FunctionType
-from typing import Any, Callable, Coroutine, Generic, overload
+from typing import TYPE_CHECKING, Any, Callable, Coroutine, Generic, Iterable, overload
 from uuid import uuid4
 
 import anyio
 import cloudpickle
-from typing_extensions import ParamSpec, TypeVar
+from typing_extensions import ParamSpec, TypeVar, override
 
 from timeout_executor.const import SUBPROCESS_COMMAND, TIMEOUT_EXECUTOR_INPUT_FILE
 from timeout_executor.logging import logger
 from timeout_executor.result import AsyncResult
 from timeout_executor.terminate import Terminator
+from timeout_executor.types import Callback, ExecutorArgs, ProcessCallback
+
+if TYPE_CHECKING:
+    from timeout_executor.main import TimeoutExecutor
 
 __all__ = ["apply_func", "delay_func"]
 
@@ -27,12 +34,19 @@ P2 = ParamSpec("P2")
 T2 = TypeVar("T2", infer_variance=True)
 
 
-class Executor(Generic[P, T]):
-    def __init__(self, timeout: float, func: Callable[P, T]) -> None:
+class Executor(Callback, Generic[P, T]):
+    def __init__(
+        self,
+        timeout: float,
+        func: Callable[P, T],
+        callbacks: Callable[[], Iterable[ProcessCallback]] | None = None,
+    ) -> None:
         self._timeout = timeout
         self._func = func
         self._func_name = func_name(func)
         self._unique_id = uuid4()
+        self._init_callbacks = callbacks
+        self._callbacks: deque[ProcessCallback] = deque()
 
     def _create_temp_files(self) -> tuple[Path, Path]:
         temp_dir = Path(tempfile.gettempdir()) / "timeout_executor"
@@ -75,6 +89,18 @@ class Executor(Generic[P, T]):
         logger.debug("%r process: %d", self, process.pid)
         return process
 
+    def _create_executor_args(
+        self, input_file: Path | anyio.Path, output_file: Path | anyio.Path
+    ) -> ExecutorArgs:
+        return ExecutorArgs(
+            executor=self,
+            func_name=self._func_name,
+            terminator=None,
+            input_file=input_file,
+            output_file=output_file,
+            timeout=self._timeout,
+        )
+
     def apply(self, *args: P.args, **kwargs: P.kwargs) -> AsyncResult[T]:
         input_file, output_file = self._create_temp_files()
         input_args_as_bytes = self._dump_args(output_file, *args, **kwargs)
@@ -84,10 +110,12 @@ class Executor(Generic[P, T]):
             file.write(input_args_as_bytes)
         logger.debug("%r after write input file", self)
 
-        terminator = Terminator(self._timeout, self._func_name)
+        executor_args = self._create_executor_args(input_file, output_file)
+        terminator = Terminator(executor_args, self.callbacks)
         process = self._create_process(input_file)
         terminator.process = process
-        return AsyncResult(process, terminator, input_file, output_file, self._timeout)
+        executor_args = executor_args.copy({"terminator": terminator})
+        return AsyncResult(process, executor_args)
 
     async def delay(self, *args: P.args, **kwargs: P.kwargs) -> AsyncResult[T]:
         input_file, output_file = self._create_temp_files()
@@ -99,18 +127,35 @@ class Executor(Generic[P, T]):
             await file.write(input_args_as_bytes)
         logger.debug("%r after write input file", self)
 
-        terminator = Terminator(self._timeout, self._func_name)
+        executor_args = self._create_executor_args(input_file, output_file)
+        terminator = Terminator(executor_args, self.callbacks)
         process = self._create_process(input_file)
         terminator.process = process
-        return AsyncResult(process, terminator, input_file, output_file, self._timeout)
+        executor_args = executor_args.copy({"terminator": terminator})
+        return AsyncResult(process, executor_args)
 
     def __repr__(self) -> str:
         return f"<{type(self).__name__}: {self._func_name}>"
 
+    @override
+    def callbacks(self) -> Iterable[ProcessCallback]:
+        if self._init_callbacks is None:
+            return self._callbacks.copy()
+        return chain(self._init_callbacks(), self._callbacks.copy())
+
+    @override
+    def add_callback(self, callback: Callable[[subprocess.Popen[str]], Any]) -> None:
+        self._callbacks.append(callback)
+
+    @override
+    def remove_callback(self, callback: Callable[[subprocess.Popen[str]], Any]) -> None:
+        with suppress(ValueError):
+            self._callbacks.remove(callback)
+
 
 @overload
 def apply_func(
-    timeout: float,
+    timeout_or_executor: float | TimeoutExecutor,
     func: Callable[P2, Coroutine[Any, Any, T2]],
     *args: P2.args,
     **kwargs: P2.kwargs,
@@ -119,12 +164,18 @@ def apply_func(
 
 @overload
 def apply_func(
-    timeout: float, func: Callable[P2, T2], *args: P2.args, **kwargs: P2.kwargs
+    timeout_or_executor: float | TimeoutExecutor,
+    func: Callable[P2, T2],
+    *args: P2.args,
+    **kwargs: P2.kwargs,
 ) -> AsyncResult[T2]: ...
 
 
 def apply_func(
-    timeout: float, func: Callable[P2, Any], *args: P2.args, **kwargs: P2.kwargs
+    timeout_or_executor: float | TimeoutExecutor,
+    func: Callable[P2, Any],
+    *args: P2.args,
+    **kwargs: P2.kwargs,
 ) -> AsyncResult[Any]:
     """run function with deadline
 
@@ -135,13 +186,18 @@ def apply_func(
     Returns:
         async result container
     """
-    executor = Executor(timeout, func)
+    if isinstance(timeout_or_executor, (float, int)):
+        executor = Executor(timeout_or_executor, func)
+    else:
+        executor = Executor(
+            timeout_or_executor.timeout, func, timeout_or_executor.callbacks
+        )
     return executor.apply(*args, **kwargs)
 
 
 @overload
 async def delay_func(
-    timeout: float,
+    timeout_or_executor: float | TimeoutExecutor,
     func: Callable[P2, Coroutine[Any, Any, T2]],
     *args: P2.args,
     **kwargs: P2.kwargs,
@@ -150,12 +206,18 @@ async def delay_func(
 
 @overload
 async def delay_func(
-    timeout: float, func: Callable[P2, T2], *args: P2.args, **kwargs: P2.kwargs
+    timeout_or_executor: float | TimeoutExecutor,
+    func: Callable[P2, T2],
+    *args: P2.args,
+    **kwargs: P2.kwargs,
 ) -> AsyncResult[T2]: ...
 
 
 async def delay_func(
-    timeout: float, func: Callable[P2, Any], *args: P2.args, **kwargs: P2.kwargs
+    timeout_or_executor: float | TimeoutExecutor,
+    func: Callable[P2, Any],
+    *args: P2.args,
+    **kwargs: P2.kwargs,
 ) -> AsyncResult[Any]:
     """run function with deadline
 
@@ -166,7 +228,12 @@ async def delay_func(
     Returns:
         async result container
     """
-    executor = Executor(timeout, func)
+    if isinstance(timeout_or_executor, (float, int)):
+        executor = Executor(timeout_or_executor, func)
+    else:
+        executor = Executor(
+            timeout_or_executor.timeout, func, timeout_or_executor.callbacks
+        )
     return await executor.delay(*args, **kwargs)
 
 

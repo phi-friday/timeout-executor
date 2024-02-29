@@ -16,6 +16,8 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from timeout_executor.terminate import Terminator
+    from timeout_executor.types import ExecutorArgs
+
 
 __all__ = ["AsyncResult"]
 
@@ -29,30 +31,36 @@ class AsyncResult(Generic[T]):
 
     _result: Any
 
-    def __init__(  # noqa: PLR0913
-        self,
-        process: subprocess.Popen[str],
-        terminator: Terminator,
-        input_file: Path | anyio.Path,
-        output_file: Path | anyio.Path,
-        timeout: float,
+    def __init__(
+        self, process: subprocess.Popen[str], executor_args: ExecutorArgs
     ) -> None:
         self._process = process
-        self._terminator = terminator
-        self._timeout = timeout
+        self._executor_args = executor_args
         self._result = SENTINEL
 
-        if not isinstance(output_file, anyio.Path):
-            output_file = anyio.Path(output_file)
-        self._output = output_file
+        input_file, output_file = (
+            self._executor_args.output_file,
+            self._executor_args.input_file,
+        )
 
         if not isinstance(input_file, anyio.Path):
             input_file = anyio.Path(input_file)
         self._input = input_file
 
+        if not isinstance(output_file, anyio.Path):
+            output_file = anyio.Path(output_file)
+        self._output = output_file
+
     @property
     def _func_name(self) -> str:
-        return self._terminator._func_name  # noqa: SLF001
+        return self._executor_args.func_name
+
+    @property
+    def _terminator(self) -> Terminator:
+        if self._executor_args.terminator is None:
+            raise AttributeError("there is no terminator")
+
+        return self._executor_args.terminator
 
     def result(self, timeout: float | None = None) -> T:
         """get value sync method"""
@@ -62,14 +70,15 @@ class AsyncResult(Generic[T]):
     async def delay(self, timeout: float | None = None) -> T:
         """get value async method"""
         if timeout is None:
-            timeout = self._timeout
+            timeout = self._executor_args.timeout
 
         try:
             logger.debug("%r wait process :: deadline: %.2fs", self, timeout)
             return await self._delay(timeout)
         finally:
             with anyio.CancelScope(shield=True):
-                self._terminator.close("async result")
+                if self._executor_args.terminator is not None:
+                    self._executor_args.terminator.close("async result")
 
     async def _delay(self, timeout: float) -> T:
         if self._process.returncode is not None:
@@ -98,8 +107,11 @@ class AsyncResult(Generic[T]):
         if self._process.returncode is None:
             raise RuntimeError("process is running")
 
-        if self._terminator.is_active:
-            raise TimeoutError(self._timeout)
+        if (
+            self._executor_args.terminator is not None
+            and self._executor_args.terminator.is_active
+        ):
+            raise TimeoutError(self._executor_args.timeout)
 
         if not await self._output.exists():
             raise FileNotFoundError(self._output)

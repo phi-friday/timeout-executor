@@ -1,12 +1,17 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Coroutine, overload
+from collections import deque
+from contextlib import suppress
+from typing import TYPE_CHECKING, Any, Callable, Coroutine, Iterable, overload
 
-from typing_extensions import ParamSpec, TypeVar
+from typing_extensions import ParamSpec, TypeVar, override
 
-from timeout_executor.executor import Executor, apply_func, delay_func
+from timeout_executor.executor import apply_func, delay_func
+from timeout_executor.types import Callback, ProcessCallback
 
 if TYPE_CHECKING:
+    import subprocess
+
     from timeout_executor.result import AsyncResult
 
 __all__ = ["TimeoutExecutor"]
@@ -15,14 +20,17 @@ P = ParamSpec("P")
 T = TypeVar("T", infer_variance=True)
 
 
-class TimeoutExecutor:
+class TimeoutExecutor(Callback):
     """timeout executor"""
 
     def __init__(self, timeout: float) -> None:
         self._timeout = timeout
+        self._callbacks: deque[ProcessCallback] = deque()
 
-    def _create_executor(self, func: Callable[P, T]) -> Executor[P, T]:
-        return Executor(self._timeout, func)
+    @property
+    def timeout(self) -> float:
+        """deadline"""
+        return self._timeout
 
     @overload
     def apply(
@@ -46,7 +54,7 @@ class TimeoutExecutor:
         Returns:
             async result container
         """
-        return apply_func(self._timeout, func, *args, **kwargs)
+        return apply_func(self, func, *args, **kwargs)
 
     @overload
     async def delay(
@@ -70,7 +78,7 @@ class TimeoutExecutor:
         Returns:
             async result container
         """
-        return await delay_func(self._timeout, func, *args, **kwargs)
+        return await delay_func(self, func, *args, **kwargs)
 
     @overload
     async def apply_async(
@@ -97,3 +105,19 @@ class TimeoutExecutor:
             async result container
         """
         return await self.delay(func, *args, **kwargs)
+
+    def __repr__(self) -> str:
+        return f"<{type(self).__name__}, timeout: {self.timeout:.2f}s>"
+
+    @override
+    def callbacks(self) -> Iterable[ProcessCallback]:
+        return self._callbacks.copy()
+
+    @override
+    def add_callback(self, callback: Callable[[subprocess.Popen[str]], Any]) -> None:
+        self._callbacks.append(callback)
+
+    @override
+    def remove_callback(self, callback: Callable[[subprocess.Popen[str]], Any]) -> None:
+        with suppress(ValueError):
+            self._callbacks.remove(callback)
