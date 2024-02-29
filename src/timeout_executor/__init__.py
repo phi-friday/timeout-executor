@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from timeout_executor.executor import TimeoutExecutor, apply_func, delay_func
+from timeout_executor.executor import apply_func, delay_func
+from timeout_executor.main import TimeoutExecutor
 from timeout_executor.result import AsyncResult
 
 __all__ = ["TimeoutExecutor", "AsyncResult", "apply_func", "delay_func"]
