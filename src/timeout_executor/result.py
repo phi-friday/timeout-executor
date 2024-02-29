@@ -9,6 +9,7 @@ import cloudpickle
 from async_wrapper import async_to_sync, sync_to_async
 from typing_extensions import TypeVar
 
+from timeout_executor.logging import logger
 from timeout_executor.serde import SerializedError, loads_error
 
 if TYPE_CHECKING:
@@ -30,7 +31,7 @@ class AsyncResult(Generic[T]):
 
     def __init__(  # noqa: PLR0913
         self,
-        process: subprocess.Popen,
+        process: subprocess.Popen[str],
         terminator: Terminator,
         input_file: Path | anyio.Path,
         output_file: Path | anyio.Path,
@@ -49,6 +50,10 @@ class AsyncResult(Generic[T]):
             input_file = anyio.Path(input_file)
         self._input = input_file
 
+    @property
+    def _func_name(self) -> str:
+        return self._terminator._func_name  # noqa: SLF001
+
     def result(self, timeout: float | None = None) -> T:
         """get value sync method"""
         future = async_to_sync(self.delay)
@@ -56,18 +61,19 @@ class AsyncResult(Generic[T]):
 
     async def delay(self, timeout: float | None = None) -> T:
         """get value async method"""
+        if timeout is None:
+            timeout = self._timeout
+
         try:
+            logger.debug("%r wait process :: deadline: %.2fs", self, timeout)
             return await self._delay(timeout)
         finally:
             with anyio.CancelScope(shield=True):
-                self._terminator.close()
+                self._terminator.close("async result")
 
-    async def _delay(self, timeout: float | None) -> T:
+    async def _delay(self, timeout: float) -> T:
         if self._process.returncode is not None:
             return await self._load_output()
-
-        if timeout is None:
-            timeout = self._timeout
 
         try:
             await wait_process(self._process, timeout, self._input)
@@ -82,6 +88,7 @@ class AsyncResult(Generic[T]):
 
     async def _load_output(self) -> T:
         if self._result is not SENTINEL:
+            logger.debug("%r has result.", self)
             if isinstance(self._result, SerializedError):
                 self._result = loads_error(self._result)
             if isinstance(self._result, Exception):
@@ -97,15 +104,21 @@ class AsyncResult(Generic[T]):
         if not await self._output.exists():
             raise FileNotFoundError(self._output)
 
+        logger.debug("%r before load output: %s", self, self._output)
         async with await self._output.open("rb") as file:
             value = await file.read()
             self._result = cloudpickle.loads(value)
+        logger.debug("%r after load output :: size: %d", self, len(value))
 
+        logger.debug("%r remove temp files: %s", self, self._output.parent)
         async with anyio.create_task_group() as task_group:
             task_group.start_soon(self._output.unlink, True)  # noqa: FBT003
             task_group.start_soon(self._input.unlink, True)  # noqa: FBT003
         await self._output.parent.rmdir()
         return await self._load_output()
+
+    def __repr__(self) -> str:
+        return f"<{type(self).__name__}: {self._func_name}>"
 
 
 async def wait_process(
