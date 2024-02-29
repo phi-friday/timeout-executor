@@ -27,6 +27,10 @@ jobs:
       - name: Install rye
         uses: eifinger/setup-rye@v1
 
+      - name: set rye python
+        run: |
+          rye pin cpython@${{ matrix.python-version }}
+
       - name: Install dependencies
         run: pip install dunamai
 

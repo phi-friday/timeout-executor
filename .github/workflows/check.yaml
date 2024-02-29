@@ -18,6 +18,10 @@ jobs:
 
       - name: Install rye
         uses: eifinger/setup-rye@v1
+      
+      - name: set rye python
+        run: |
+          rye pin cpython@${{ matrix.python-version }}
 
       - name: Load cached venv
         id: cached-venv-dependencies
@@ -29,7 +33,6 @@ jobs:
       - name: Install dependencies
         if: steps.cached-venv-dependencies.outputs.cache-hit != 'true'
         run: |
-          rye pin cpython@${{ matrix.python-version }}
           rye sync --all-features
 
       - name: Load cached pre-commit
