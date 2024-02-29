@@ -90,6 +90,10 @@ class AsyncResult(Generic[T]):
             value = await file.read()
             self._result = cloudpickle.loads(value)
 
+        async with anyio.create_task_group() as task_group:
+            task_group.start_soon(self._output.unlink, True)  # noqa: FBT003
+            task_group.start_soon(self._input.unlink, True)  # noqa: FBT003
+        await self._output.parent.rmdir()
         return await self._load_output()
 
 
