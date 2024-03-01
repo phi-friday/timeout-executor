@@ -16,8 +16,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # - name: Install rye
-      #   uses: eifinger/setup-rye@v1
       - name: Install rye
         env:
           RYE_INSTALL_OPTION: '--yes'
