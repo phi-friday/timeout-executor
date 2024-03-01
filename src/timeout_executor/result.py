@@ -37,9 +37,6 @@ class AsyncResult(Callback, Generic[T]):
     ) -> None:
         self._process = process
 
-        if executor_args.terminator is None:
-            raise ValueError("there is no terminator")
-
         self._executor_args = executor_args
         self._result = SENTINEL
 
@@ -62,9 +59,6 @@ class AsyncResult(Callback, Generic[T]):
 
     @property
     def _terminator(self) -> Terminator:
-        if self._executor_args.terminator is None:
-            raise AttributeError("there is no terminator")
-
         return self._executor_args.terminator
 
     def result(self, timeout: float | None = None) -> T:
@@ -82,8 +76,7 @@ class AsyncResult(Callback, Generic[T]):
             return await self._delay(timeout)
         finally:
             with anyio.CancelScope(shield=True):
-                if self._executor_args.terminator is not None:
-                    self._executor_args.terminator.close("async result")
+                self._executor_args.terminator.close("async result")
 
     async def _delay(self, timeout: float) -> T:
         if self._process.returncode is not None:
@@ -112,10 +105,7 @@ class AsyncResult(Callback, Generic[T]):
         if self._process.returncode is None:
             raise RuntimeError("process is running")
 
-        if (
-            self._executor_args.terminator is not None
-            and self._executor_args.terminator.is_active
-        ):
+        if self._executor_args.terminator.is_active:
             raise TimeoutError(self._executor_args.timeout)
 
         if not await self._output.exists():

@@ -23,17 +23,21 @@ class Terminator(Callback):
 
     def __init__(
         self,
-        executor_args: ExecutorArgs,
+        executor_args: Callable[[Terminator], ExecutorArgs],
         callbacks: Callable[[], Iterable[ProcessCallback]] | None = None,
     ) -> None:
         self._process = None
         self._is_active = False
-        self._executor_args = executor_args.copy({"terminator": self})
+        self._executor_args = executor_args(self)
         self._init_callbacks = callbacks
         self._callbacks: deque[ProcessCallback] = deque()
 
         self.callback_thread = None
         self.terminator_thread = None
+
+    @property
+    def executor_args(self) -> ExecutorArgs:
+        return self._executor_args
 
     @property
     def process(self) -> subprocess.Popen[str]:
@@ -121,7 +125,7 @@ class Terminator(Callback):
                 self.callback_thread is not None and not self.callback_thread.is_alive()
             )
         ):
-            logger.warning("%r already ended", self)
+            logger.warning("%r already ended -> skip add callback %r", self, callback)
             return self
         self._callbacks.append(callback)
         return self

@@ -6,6 +6,7 @@ import sys
 import tempfile
 from collections import deque
 from contextlib import suppress
+from functools import partial
 from inspect import isclass
 from itertools import chain
 from pathlib import Path
@@ -90,12 +91,15 @@ class Executor(Callback, Generic[P, T]):
         return process
 
     def _create_executor_args(
-        self, input_file: Path | anyio.Path, output_file: Path | anyio.Path
+        self,
+        input_file: Path | anyio.Path,
+        output_file: Path | anyio.Path,
+        terminator: Terminator,
     ) -> ExecutorArgs:
         return ExecutorArgs(
             executor=self,
             func_name=self._func_name,
-            terminator=None,
+            terminator=terminator,
             input_file=input_file,
             output_file=output_file,
             timeout=self._timeout,
@@ -110,12 +114,13 @@ class Executor(Callback, Generic[P, T]):
             file.write(input_args_as_bytes)
         logger.debug("%r after write input file", self)
 
-        executor_args = self._create_executor_args(input_file, output_file)
-        terminator = Terminator(executor_args, self.callbacks)
+        executor_args_builder = partial(
+            self._create_executor_args, input_file, output_file
+        )
+        terminator = Terminator(executor_args_builder, self.callbacks)
         process = self._create_process(input_file)
         terminator.process = process
-        executor_args = executor_args.copy({"terminator": terminator})
-        return AsyncResult(process, executor_args)
+        return AsyncResult(process, terminator.executor_args)
 
     async def delay(self, *args: P.args, **kwargs: P.kwargs) -> AsyncResult[T]:
         input_file, output_file = self._create_temp_files()
@@ -127,12 +132,13 @@ class Executor(Callback, Generic[P, T]):
             await file.write(input_args_as_bytes)
         logger.debug("%r after write input file", self)
 
-        executor_args = self._create_executor_args(input_file, output_file)
-        terminator = Terminator(executor_args, self.callbacks)
+        executor_args_builder = partial(
+            self._create_executor_args, input_file, output_file
+        )
+        terminator = Terminator(executor_args_builder, self.callbacks)
         process = self._create_process(input_file)
         terminator.process = process
-        executor_args = executor_args.copy({"terminator": terminator})
-        return AsyncResult(process, executor_args)
+        return AsyncResult(process, terminator.executor_args)
 
     def __repr__(self) -> str:
         return f"<{type(self).__name__}: {self._func_name}>"

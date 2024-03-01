@@ -4,7 +4,7 @@ import sys
 from abc import ABC, abstractmethod
 from collections import deque
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Callable, Iterable, final
+from typing import TYPE_CHECKING, Any, Callable, Iterable
 
 from timeout_executor.logging import logger
 
@@ -16,13 +16,10 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     import anyio
-    from typing_extensions import Self, TypeAlias, TypedDict
+    from typing_extensions import Self, TypeAlias
 
     from timeout_executor.executor import Executor
     from timeout_executor.terminate import Terminator
-
-    class ExecutorArgsUpdateDict(TypedDict, total=False):
-        terminator: Terminator
 
 
 __all__ = ["ExecutorArgs", "ProcessCallback", "Callback"]
@@ -30,29 +27,16 @@ __all__ = ["ExecutorArgs", "ProcessCallback", "Callback"]
 ProcessCallback: TypeAlias = "Callable[[subprocess.Popen[str]], Any]"
 
 
-@final
 @dataclass(frozen=True)
 class ExecutorArgs:
     """executor args"""
 
     executor: Executor
     func_name: str
-    terminator: Terminator | None
+    terminator: Terminator
     input_file: Path | anyio.Path
     output_file: Path | anyio.Path
     timeout: float
-
-    def copy(self, update: ExecutorArgsUpdateDict | None = None) -> ExecutorArgs:
-        """create new one"""
-        update = update or {}
-        return ExecutorArgs(
-            executor=self.executor,
-            func_name=self.func_name,
-            terminator=update.get("terminator", self.terminator),
-            input_file=self.input_file,
-            output_file=self.output_file,
-            timeout=self.timeout,
-        )
 
 
 class Callback(ABC):
