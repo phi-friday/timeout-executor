@@ -19,11 +19,6 @@ jobs:
           token: "${{ secrets.GITHUB_TOKEN }}"
           fetch-depth: 0
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-
       - name: Install rye
         env:
           RYE_INSTALL_OPTION: '--yes'
@@ -31,13 +26,19 @@ jobs:
           curl -sSf https://rye-up.com/get | bash
           echo "$HOME/.rye/shims" >> $GITHUB_PATH
 
-      - name: Install dependencies
-        run: pip install dunamai
+      - name: set python version
+        id: set-python
+        run: |
+          rye config --set-bool behavior.use-uv=true
+          rye pin cpython@${{ matrix.python-version }}
+          cat .python-version
+          VERSION=$(cat .python-version)
+          echo "python_version=${VERSION}" >> $GITHUB_OUTPUT
 
       - name: Build package
         run: |
+          rye install dunamai
           VERSION=$(dunamai from any --no-metadata --style pep440)
-          rye pin cpython@${{ matrix.python-version }}
           rye version $VERSION
           rye build
 
