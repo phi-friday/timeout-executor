@@ -86,7 +86,7 @@ class Terminator(Callback):
         logger.debug("%r create terminator thread", self)
         self._terminator_thread = threading.Thread(
             target=terminate,
-            args=(self.callback_args.process, self),
+            args=(self,),
             name=f"{self.func_name}-callback-{self.executor_args.executor.unique_id}",
         )
         self._terminator_thread.daemon = True
@@ -99,7 +99,7 @@ class Terminator(Callback):
         logger.debug("%r create callback thread", self)
         self._callback_thread = threading.Thread(
             target=callback,
-            args=(self.callback_args, self),
+            args=(self,),
             name=f"{self.func_name}-terminator-{self.executor_args.executor.unique_id}",
         )
         self._callback_thread.daemon = True
@@ -155,16 +155,16 @@ class Terminator(Callback):
         return self
 
 
-def terminate(process: subprocess.Popen[str], terminator: Terminator) -> None:
+def terminate(terminator: Terminator) -> None:
     try:
         with suppress(TimeoutError, subprocess.TimeoutExpired):
-            process.wait(terminator.timeout)
+            terminator.callback_args.process.wait(terminator.timeout)
     finally:
         terminator.close("terminator thread")
 
 
-def callback(callback_args: CallbackArgs, terminator: Terminator) -> None:
+def callback(terminator: Terminator) -> None:
     try:
-        callback_args.process.wait()
+        terminator.callback_args.process.wait()
     finally:
-        terminator.run_callbacks(callback_args, terminator.func_name)
+        terminator.run_callbacks(terminator.callback_args, terminator.func_name)
