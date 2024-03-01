@@ -15,7 +15,7 @@ from uuid import uuid4
 
 import anyio
 import cloudpickle
-from typing_extensions import ParamSpec, TypeVar, override
+from typing_extensions import ParamSpec, Self, TypeVar, override
 
 from timeout_executor.const import SUBPROCESS_COMMAND, TIMEOUT_EXECUTOR_INPUT_FILE
 from timeout_executor.logging import logger
@@ -144,13 +144,15 @@ class Executor(Callback, Generic[P, T]):
         return chain(self._init_callbacks(), self._callbacks.copy())
 
     @override
-    def add_callback(self, callback: Callable[[subprocess.Popen[str]], Any]) -> None:
+    def add_callback(self, callback: Callable[[subprocess.Popen[str]], Any]) -> Self:
         self._callbacks.append(callback)
+        return self
 
     @override
-    def remove_callback(self, callback: Callable[[subprocess.Popen[str]], Any]) -> None:
+    def remove_callback(self, callback: Callable[[subprocess.Popen[str]], Any]) -> Self:
         with suppress(ValueError):
             self._callbacks.remove(callback)
+        return self
 
 
 @overload

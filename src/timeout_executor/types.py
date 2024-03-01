@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     import anyio
-    from typing_extensions import TypeAlias, TypedDict
+    from typing_extensions import Self, TypeAlias, TypedDict
 
     from timeout_executor.executor import Executor
     from timeout_executor.terminate import Terminator
@@ -63,11 +63,11 @@ class Callback(ABC):
         """return callbacks"""
 
     @abstractmethod
-    def add_callback(self, callback: ProcessCallback) -> None:
+    def add_callback(self, callback: ProcessCallback) -> Self:
         """add callback"""
 
     @abstractmethod
-    def remove_callback(self, callback: ProcessCallback) -> None:
+    def remove_callback(self, callback: ProcessCallback) -> Self:
         """remove callback if exists"""
 
     def run_callbacks(self, process: subprocess.Popen[str], func_name: str) -> None:

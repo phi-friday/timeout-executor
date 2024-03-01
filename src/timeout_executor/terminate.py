@@ -8,7 +8,7 @@ from contextlib import suppress
 from itertools import chain
 from typing import Any, Callable, Iterable
 
-from typing_extensions import override
+from typing_extensions import Self, override
 
 from timeout_executor.logging import logger
 from timeout_executor.types import Callback, ExecutorArgs, ProcessCallback
@@ -108,13 +108,15 @@ class Terminator(Callback):
         return chain(self._init_callbacks(), self._callbacks.copy())
 
     @override
-    def add_callback(self, callback: Callable[[subprocess.Popen[str]], Any]) -> None:
+    def add_callback(self, callback: Callable[[subprocess.Popen[str]], Any]) -> Self:
         self._callbacks.append(callback)
+        return self
 
     @override
-    def remove_callback(self, callback: Callable[[subprocess.Popen[str]], Any]) -> None:
+    def remove_callback(self, callback: Callable[[subprocess.Popen[str]], Any]) -> Self:
         with suppress(ValueError):
             self._callbacks.remove(callback)
+        return self
 
 
 def terminate(process: subprocess.Popen, terminator: Terminator) -> None:

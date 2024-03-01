@@ -4,7 +4,7 @@ from collections import deque
 from contextlib import suppress
 from typing import TYPE_CHECKING, Any, Callable, Coroutine, Iterable, overload
 
-from typing_extensions import ParamSpec, TypeVar, override
+from typing_extensions import ParamSpec, Self, TypeVar, override
 
 from timeout_executor.executor import apply_func, delay_func
 from timeout_executor.types import Callback, ProcessCallback
@@ -114,10 +114,12 @@ class TimeoutExecutor(Callback):
         return self._callbacks.copy()
 
     @override
-    def add_callback(self, callback: Callable[[subprocess.Popen[str]], Any]) -> None:
+    def add_callback(self, callback: Callable[[subprocess.Popen[str]], Any]) -> Self:
         self._callbacks.append(callback)
+        return self
 
     @override
-    def remove_callback(self, callback: Callable[[subprocess.Popen[str]], Any]) -> None:
+    def remove_callback(self, callback: Callable[[subprocess.Popen[str]], Any]) -> Self:
         with suppress(ValueError):
             self._callbacks.remove(callback)
+        return self
