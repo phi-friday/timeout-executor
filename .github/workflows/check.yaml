@@ -45,6 +45,7 @@ jobs:
         if: steps.cached-venv-dependencies.outputs.cache-hit != 'true'
         run: |
           rye pin cpython@${{ steps.set-python.outputs.python_version }}
+          rye config --set-bool behavior.use-uv=false
           rye sync --all-features
 
       # - name: Load cached pre-commit
