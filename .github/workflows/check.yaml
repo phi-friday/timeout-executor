@@ -18,13 +18,21 @@ jobs:
 
       - name: Install rye
         uses: eifinger/setup-rye@v1
+        with:
+          enable-cache: true
+          cache-prefix: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/pyproject.toml') }}
 
       - name: set python version
+        id: set-python
         run: |
           rye pin cpython@${{ matrix.python-version }}
           cat .python-version
           VERSION=$(cat .python-version)
           echo "python_version=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: echo output
+        run: |
+          echo ${{ steps.set-python.outputs.python_version }}
 
       # - name: Load cached venv
       #   id: cached-venv-dependencies
