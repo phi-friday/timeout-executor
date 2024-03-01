@@ -3,8 +3,12 @@ name: lint & test
 on:
   push:
     branches: [dev]
+    paths:
+      - "**.py"
   pull_request:
     branches: [dev, main]
+    paths:
+      - "**.py"
 
 jobs:
   build:
@@ -18,7 +22,7 @@ jobs:
 
       - name: Install rye
         env:
-          RYE_INSTALL_OPTION: '--yes'
+          RYE_INSTALL_OPTION: "--yes"
         run: |
           curl -sSf https://rye-up.com/get | bash
           echo "$HOME/.rye/shims" >> $GITHUB_PATH
