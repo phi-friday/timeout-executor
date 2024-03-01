@@ -28,7 +28,7 @@ jobs:
       - name: set python version
         id: set-python
         run: |
-          rye config --set-bool behavior.use-uv=false
+          rye config --set-bool behavior.use-uv=true
           rye pin cpython@${{ matrix.python-version }}
           cat .python-version
           VERSION=$(cat .python-version)
@@ -45,7 +45,6 @@ jobs:
         if: steps.cached-venv-dependencies.outputs.cache-hit != 'true'
         run: |
           rye pin cpython@${{ steps.set-python.outputs.python_version }}
-          rye config --set-bool behavior.use-uv=false
           rye sync --all-features
 
       # - name: Load cached pre-commit
