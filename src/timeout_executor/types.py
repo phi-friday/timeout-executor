@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from abc import ABC, abstractmethod
 from collections import deque
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Callable, Iterable
 
 from timeout_executor.logging import logger
@@ -38,12 +38,18 @@ class ExecutorArgs:
     timeout: float
 
 
+@dataclass
+class State:
+    value: Any = field(default=None)
+
+
 @dataclass(frozen=True)
 class CallbackArgs:
     """callback args"""
 
     process: subprocess.Popen[str]
     result: AsyncResult
+    state: State = field(default_factory=State)
 
 
 class Callback(ABC):
