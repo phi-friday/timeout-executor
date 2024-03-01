@@ -19,6 +19,8 @@ jobs:
       # - name: Install rye
       #   uses: eifinger/setup-rye@v1
       - name: Install rye
+        env:
+          RYE_INSTALL_OPTION: '--yes'
         run: |
           curl -sSf https://rye-up.com/get | bash
 
