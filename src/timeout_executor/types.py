@@ -25,8 +25,14 @@ if TYPE_CHECKING:
 
 __all__ = ["ExecutorArgs", "CallbackArgs", "ProcessCallback", "Callback"]
 
+_DATACLASS_FROZEN_KWARGS: dict[str, bool] = {"frozen": True}
+_DATACLASS_NON_FROZEN_KWARGS: dict[str, bool] = {}
+if sys.version_info >= (3, 10):
+    _DATACLASS_FROZEN_KWARGS.update({"kw_only": True, "slots": True})
+    _DATACLASS_NON_FROZEN_KWARGS.update({"kw_only": True, "slots": True})
 
-@dataclass(frozen=True)
+
+@dataclass(**_DATACLASS_FROZEN_KWARGS)
 class ExecutorArgs:
     """executor args"""
 
@@ -38,18 +44,18 @@ class ExecutorArgs:
     timeout: float
 
 
-@dataclass
+@dataclass(**_DATACLASS_NON_FROZEN_KWARGS)
 class State:
     value: Any = field(default=None)
 
 
-@dataclass(frozen=True)
+@dataclass(**_DATACLASS_FROZEN_KWARGS)
 class CallbackArgs:
     """callback args"""
 
     process: subprocess.Popen[str]
     result: AsyncResult
-    state: State = field(default_factory=State)
+    state: State = field(init=False, default_factory=State)
 
 
 class Callback(ABC):
