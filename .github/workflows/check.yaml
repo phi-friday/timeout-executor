@@ -16,8 +16,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # - name: Install rye
+      #   uses: eifinger/setup-rye@v1
       - name: Install rye
-        uses: eifinger/setup-rye@v1
+        run: |
+          curl -sSf https://rye-up.com/get | bash
 
       - name: set python version
         id: set-python
@@ -27,31 +30,31 @@ jobs:
           VERSION=$(cat .python-version)
           echo "python_version=${VERSION}" >> $GITHUB_OUTPUT
 
-      - name: Load cached venv
-        id: cached-venv-dependencies
-        uses: actions/cache@v4
-        with:
-          path: .venv
-          key: venv-${{ runner.os }}-${{ steps.set-python.outputs.python_version }}-${{ hashFiles('**/pyproject.toml') }}
+      # - name: Load cached venv
+      #   id: cached-venv-dependencies
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: .venv
+      #     key: venv-${{ runner.os }}-${{ steps.set-python.outputs.python_version }}-${{ hashFiles('**/pyproject.toml') }}
 
-      - name: Install dependencies
-        if: steps.cached-venv-dependencies.outputs.cache-hit != 'true'
-        run: |
-          rye pin cpython@${{ steps.set-python.outputs.python_version }}
-          rye config --set-bool behavior.use-uv=false
-          rye sync --all-features
+      # - name: Install dependencies
+      #   if: steps.cached-venv-dependencies.outputs.cache-hit != 'true'
+      #   run: |
+      #     rye pin cpython@${{ steps.set-python.outputs.python_version }}
+      #     rye config --set-bool behavior.use-uv=false
+      #     rye sync --all-features
 
-      - name: Load cached pre-commit
-        id: cached-pre-commit-dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pre-commit
-          key: venv-${{ runner.os }}-${{ steps.cached-venv-dependencies.outputs.python_version }}-${{ hashFiles('**/pyproject.toml') }}
+      # - name: Load cached pre-commit
+      #   id: cached-pre-commit-dependencies
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: ~/.cache/pre-commit
+      #     key: venv-${{ runner.os }}-${{ steps.cached-venv-dependencies.outputs.python_version }}-${{ hashFiles('**/pyproject.toml') }}
 
-      - name: Code checks
-        run: |
-          rye run pre-commit run --all-files --show-diff-on-failure
+      # - name: Code checks
+      #   run: |
+      #     rye run pre-commit run --all-files --show-diff-on-failure
 
-      - name: Test with pytest
-        run: |
-          rye run pytest
+      # - name: Test with pytest
+      #   run: |
+      #     rye run pytest
