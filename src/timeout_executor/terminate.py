@@ -110,8 +110,9 @@ class Terminator(Callback):
         logger.debug("%r try to terminate process from %s", self, name or "unknown")
         process = self.callback_args.process
         if process.returncode is None:
-            process.terminate()
-            self.is_active = True
+            with suppress(ProcessLookupError):
+                process.terminate()
+                self.is_active = True
 
         if process.stdout is not None:
             text = process.stdout.read()
