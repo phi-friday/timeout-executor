@@ -116,7 +116,7 @@ class Executor(Callback, Generic[P, T]):
         input_file: Path | anyio.Path,
         output_file: Path | anyio.Path,
         stacklevel: int = 2,
-    ) -> AsyncResult:
+    ) -> AsyncResult[T]:
         logger.debug("%r before init process", self, stacklevel=stacklevel)
         executor_args_builder = partial(
             self._create_executor_args, input_file, output_file

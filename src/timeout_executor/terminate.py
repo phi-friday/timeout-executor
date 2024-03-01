@@ -155,7 +155,7 @@ class Terminator(Callback):
         return self
 
 
-def terminate(process: subprocess.Popen, terminator: Terminator) -> None:
+def terminate(process: subprocess.Popen[str], terminator: Terminator) -> None:
     try:
         with suppress(TimeoutError, subprocess.TimeoutExpired):
             process.wait(terminator.timeout)

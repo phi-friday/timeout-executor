@@ -143,7 +143,7 @@ class AsyncResult(Callback, Generic[T]):
 
 
 async def wait_process(
-    process: subprocess.Popen, timeout: float, input_file: Path | anyio.Path
+    process: subprocess.Popen[str], timeout: float, input_file: Path | anyio.Path
 ) -> None:
     wait_func = partial(sync_to_async(process.wait), timeout)
     if not isinstance(input_file, anyio.Path):
