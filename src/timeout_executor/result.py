@@ -98,7 +98,7 @@ class AsyncResult(Callback, Generic[T]):
             logger.debug("%r has result.", self)
             if isinstance(self._result, SerializedError):
                 self._result = loads_error(self._result)
-            if isinstance(self._result, Exception):
+            if isinstance(self._result, BaseException):
                 raise self._result
             return self._result
 

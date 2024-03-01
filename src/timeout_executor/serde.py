@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from collections import deque
 from dataclasses import dataclass
 from operator import itemgetter
@@ -16,8 +17,14 @@ from tblib.pickling_support import (
 
 __all__ = ["dumps_error", "loads_error", "serialize_error", "deserialize_error"]
 
+_DATACLASS_FROZEN_KWARGS: dict[str, bool] = {"frozen": True}
+if sys.version_info >= (3, 10):
+    _DATACLASS_FROZEN_KWARGS.update({"kw_only": True, "slots": True})
 
-@dataclass(frozen=True)
+SENTINEL = object()
+
+
+@dataclass(**_DATACLASS_FROZEN_KWARGS)
 class SerializedError:
     arg_exception: tuple[Any, ...]
     arg_tracebacks: tuple[tuple[int, tuple[Any, ...]], ...]
@@ -30,7 +37,7 @@ def serialize_traceback(traceback: TracebackType) -> tuple[Any, ...]:
     return pickle_traceback(traceback)
 
 
-def serialize_error(error: Exception) -> SerializedError:
+def serialize_error(error: BaseException) -> SerializedError:
     """serialize exception"""
     exception = pickle_exception(error)[1:]
 
@@ -62,7 +69,7 @@ def serialize_error(error: Exception) -> SerializedError:
     )
 
 
-def deserialize_error(error: SerializedError) -> Exception:
+def deserialize_error(error: SerializedError) -> BaseException:
     """deserialize exception"""
     arg_exception: deque[Any] = deque(error.arg_exception)
     arg_tracebacks: deque[tuple[int, tuple[Any, ...]]] = deque(error.arg_tracebacks)
@@ -80,7 +87,7 @@ def deserialize_error(error: SerializedError) -> Exception:
     return unpickle_exception(*arg_exception, *exception)
 
 
-def dumps_error(error: Exception | SerializedError) -> bytes:
+def dumps_error(error: BaseException | SerializedError) -> bytes:
     """serialize exception as bytes"""
     if not isinstance(error, SerializedError):
         error = serialize_error(error)
@@ -88,7 +95,7 @@ def dumps_error(error: Exception | SerializedError) -> bytes:
     return cloudpickle.dumps(error)
 
 
-def loads_error(error: bytes | SerializedError) -> Exception:
+def loads_error(error: bytes | SerializedError) -> BaseException:
     """deserialize exception from bytes"""
     if isinstance(error, bytes):
         error = cloudpickle.loads(error)
