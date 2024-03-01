@@ -37,6 +37,7 @@ jobs:
       - name: Install dependencies
         if: steps.cached-venv-dependencies.outputs.cache-hit != 'true'
         run: |
+          rye pin cpython@${{ steps.set-python.outputs.python_version }}
           rye sync --all-features
 
       - name: Load cached pre-commit
