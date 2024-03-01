@@ -28,6 +28,7 @@ jobs:
       - name: set python version
         id: set-python
         run: |
+          rye config --set-bool behavior.use-uv=false
           rye pin cpython@${{ matrix.python-version }}
           cat .python-version
           VERSION=$(cat .python-version)
