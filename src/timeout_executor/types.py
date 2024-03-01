@@ -19,12 +19,11 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
     from timeout_executor.executor import Executor
+    from timeout_executor.result import AsyncResult
     from timeout_executor.terminate import Terminator
 
 
-__all__ = ["ExecutorArgs", "ProcessCallback", "Callback"]
-
-ProcessCallback: TypeAlias = "Callable[[subprocess.Popen[str]], Any]"
+__all__ = ["ExecutorArgs", "CallbackArgs", "ProcessCallback", "Callback"]
 
 
 @dataclass(frozen=True)
@@ -37,6 +36,14 @@ class ExecutorArgs:
     input_file: Path | anyio.Path
     output_file: Path | anyio.Path
     timeout: float
+
+
+@dataclass(frozen=True)
+class CallbackArgs:
+    """callback args"""
+
+    process: subprocess.Popen[str]
+    result: AsyncResult
 
 
 class Callback(ABC):
@@ -54,13 +61,13 @@ class Callback(ABC):
     def remove_callback(self, callback: ProcessCallback) -> Self:
         """remove callback if exists"""
 
-    def run_callbacks(self, process: subprocess.Popen[str], func_name: str) -> None:
+    def run_callbacks(self, callback_args: CallbackArgs, func_name: str) -> None:
         """run all callbacks"""
         logger.debug("%r start callbacks", self)
         errors: deque[Exception] = deque()
         for callback in self.callbacks():
             try:
-                callback(process)
+                callback(callback_args)
             except Exception as exc:  # noqa: PERF203, BLE001
                 errors.append(exc)
                 continue
@@ -69,3 +76,6 @@ class Callback(ABC):
         if errors:
             error_msg = f"[{func_name}] error when run callback"
             raise ExceptionGroup(error_msg, errors)
+
+
+ProcessCallback: TypeAlias = "Callable[[CallbackArgs], Any]"

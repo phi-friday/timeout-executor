@@ -6,51 +6,63 @@ import threading
 from collections import deque
 from contextlib import suppress
 from itertools import chain
-from typing import Any, Callable, Iterable
+from typing import Callable, Iterable
 
 from typing_extensions import Self, override
 
 from timeout_executor.logging import logger
-from timeout_executor.types import Callback, ExecutorArgs, ProcessCallback
+from timeout_executor.types import Callback, CallbackArgs, ExecutorArgs, ProcessCallback
 
 __all__ = []
 
 
 class Terminator(Callback):
     _process: subprocess.Popen[str] | None
-    callback_thread: threading.Thread | None
-    terminator_thread: threading.Thread | None
+    _callback_thread: threading.Thread | None
+    _terminator_thread: threading.Thread | None
 
     def __init__(
         self,
-        executor_args: Callable[[Terminator], ExecutorArgs],
+        executor_args_factory: Callable[[Terminator], ExecutorArgs],
         callbacks: Callable[[], Iterable[ProcessCallback]] | None = None,
     ) -> None:
-        self._process = None
         self._is_active = False
-        self._executor_args = executor_args(self)
+        self._executor_args = executor_args_factory(self)
         self._init_callbacks = callbacks
         self._callbacks: deque[ProcessCallback] = deque()
 
-        self.callback_thread = None
-        self.terminator_thread = None
+        self._callback_thread = None
+        self._terminator_thread = None
+
+        self._callback_args = None
 
     @property
     def executor_args(self) -> ExecutorArgs:
         return self._executor_args
 
     @property
-    def process(self) -> subprocess.Popen[str]:
-        if self._process is None:
-            raise AttributeError("there is no process")
-        return self._process
+    def callback_args(self) -> CallbackArgs:
+        if self._callback_args is None:
+            raise AttributeError("there is no callback args")
+        return self._callback_args
 
-    @process.setter
-    def process(self, process: subprocess.Popen[str]) -> None:
-        if self._process is not None:
-            raise AttributeError("already has process")
-        self._process = process
-        self._start()
+    @callback_args.setter
+    def callback_args(self, value: CallbackArgs) -> None:
+        if self._callback_args is not None:
+            raise AttributeError("already has callback args")
+        self._callback_args = value
+
+    @property
+    def callback_thread(self) -> threading.Thread:
+        if self._callback_thread is None:
+            raise AttributeError("there is no callback thread")
+        return self._callback_thread
+
+    @property
+    def terminator_thread(self) -> threading.Thread:
+        if self._terminator_thread is None:
+            raise AttributeError("there is no terminator thread")
+        return self._terminator_thread
 
     @property
     def timeout(self) -> float:
@@ -64,42 +76,49 @@ class Terminator(Callback):
     def is_active(self, value: bool) -> None:
         self._is_active = value
 
-    def _start(self) -> None:
+    def start(self) -> None:
+        if self._terminator_thread is not None or self._callback_thread is not None:
+            raise PermissionError("already started")
         self._start_callback_thread()
         self._start_terminator_thread()
 
     def _start_terminator_thread(self) -> None:
         logger.debug("%r create terminator thread", self)
-        self.terminator_thread = threading.Thread(
-            target=terminate, args=(self.process, self)
+        self._terminator_thread = threading.Thread(
+            target=terminate,
+            args=(self.callback_args.process, self),
+            name=f"{self.func_name}-callback-{self.executor_args.executor.unique_id}",
         )
-        self.terminator_thread.daemon = True
-        self.terminator_thread.start()
+        self._terminator_thread.daemon = True
+        self._terminator_thread.start()
         logger.debug(
-            "%r terminator thread: %d", self, self.terminator_thread.ident or -1
+            "%r terminator thread: %d", self, self._terminator_thread.ident or -1
         )
 
     def _start_callback_thread(self) -> None:
         logger.debug("%r create callback thread", self)
-        self.callback_thread = threading.Thread(
-            target=callback, args=(self.process, self)
+        self._callback_thread = threading.Thread(
+            target=callback,
+            args=(self.callback_args, self),
+            name=f"{self.func_name}-terminator-{self.executor_args.executor.unique_id}",
         )
-        self.callback_thread.daemon = True
-        self.callback_thread.start()
-        logger.debug("%r callback thread: %d", self, self.callback_thread.ident or -1)
+        self._callback_thread.daemon = True
+        self._callback_thread.start()
+        logger.debug("%r callback thread: %d", self, self._callback_thread.ident or -1)
 
     def close(self, name: str | None = None) -> None:
         logger.debug("%r try to terminate process from %s", self, name or "unknown")
-        if self.process.returncode is None:
-            self.process.terminate()
+        process = self.callback_args.process
+        if process.returncode is None:
+            process.terminate()
             self.is_active = True
 
-        if self.process.stdout is not None:
-            text = self.process.stdout.read()
+        if process.stdout is not None:
+            text = process.stdout.read()
             if text:
                 sys.stdout.write(text)
-        if self.process.stderr is not None:
-            text = self.process.stderr.read()
+        if process.stderr is not None:
+            text = process.stderr.read()
             if text:
                 sys.stderr.write(text)
 
@@ -117,13 +136,11 @@ class Terminator(Callback):
         return chain(self._init_callbacks(), self._callbacks.copy())
 
     @override
-    def add_callback(self, callback: Callable[[subprocess.Popen[str]], Any]) -> Self:
+    def add_callback(self, callback: ProcessCallback) -> Self:
         if (
             self.is_active
-            or self.process.returncode is not None
-            or (
-                self.callback_thread is not None and not self.callback_thread.is_alive()
-            )
+            or self.callback_args.process.returncode is not None
+            or not self.callback_thread.is_alive()
         ):
             logger.warning("%r already ended -> skip add callback %r", self, callback)
             return self
@@ -131,7 +148,7 @@ class Terminator(Callback):
         return self
 
     @override
-    def remove_callback(self, callback: Callable[[subprocess.Popen[str]], Any]) -> Self:
+    def remove_callback(self, callback: ProcessCallback) -> Self:
         with suppress(ValueError):
             self._callbacks.remove(callback)
         return self
@@ -145,6 +162,6 @@ def terminate(process: subprocess.Popen, terminator: Terminator) -> None:
         terminator.close("terminator thread")
 
 
-def callback(process: subprocess.Popen, terminator: Terminator) -> None:
-    process.wait()
-    terminator.run_callbacks(process, terminator.func_name)
+def callback(callback_args: CallbackArgs, terminator: Terminator) -> None:
+    callback_args.process.wait()
+    terminator.run_callbacks(callback_args, terminator.func_name)
