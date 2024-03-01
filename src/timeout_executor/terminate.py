@@ -164,5 +164,7 @@ def terminate(process: subprocess.Popen[str], terminator: Terminator) -> None:
 
 
 def callback(callback_args: CallbackArgs, terminator: Terminator) -> None:
-    callback_args.process.wait()
-    terminator.run_callbacks(callback_args, terminator.func_name)
+    try:
+        callback_args.process.wait()
+    finally:
+        terminator.run_callbacks(callback_args, terminator.func_name)
