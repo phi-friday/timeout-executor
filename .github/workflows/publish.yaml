@@ -25,11 +25,11 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install rye
-        uses: eifinger/setup-rye@v1
-
-      - name: set rye python
+        env:
+          RYE_INSTALL_OPTION: '--yes'
         run: |
-          rye pin cpython@${{ matrix.python-version }}
+          curl -sSf https://rye-up.com/get | bash
+          echo "$HOME/.rye/shims" >> $GITHUB_PATH
 
       - name: Install dependencies
         run: pip install dunamai
@@ -37,6 +37,7 @@ jobs:
       - name: Build package
         run: |
           VERSION=$(dunamai from any --no-metadata --style pep440)
+          rye pin cpython@${{ matrix.python-version }}
           rye version $VERSION
           rye build
 
