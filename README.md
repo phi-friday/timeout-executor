@@ -18,26 +18,66 @@ from __future__ import annotations
 
 import time
 
+import anyio
+
 from timeout_executor import AsyncResult, TimeoutExecutor
 
 
-def sample_func() -> None:
-    time.sleep(10)
+def sample_sync_func(x: float) -> str:
+    time.sleep(x)
+    return "done"
 
 
-executor = TimeoutExecutor(1)
-result = executor.apply(sample_func)
-assert isinstance(result, AsyncResult)
-try:
+async def sample_async_func(x: float) -> str:
+    await anyio.sleep(x)
+    return "done"
+
+
+def main() -> None:
+    executor = TimeoutExecutor(2)
+    result = executor.apply(sample_sync_func, 10)
+    assert isinstance(result, AsyncResult)
+
+    try:
+        value = result.result()
+    except Exception as exc:
+        assert isinstance(exc, TimeoutError)
+
+    result = executor.apply(sample_async_func, 1)
+    assert isinstance(result, AsyncResult)
     value = result.result()
-except Exception as exc:
-    assert isinstance(exc, TimeoutError)
+    assert value == "done"
 
-executor = TimeoutExecutor(1)
-result = executor.apply(lambda: "done")
-assert isinstance(result, AsyncResult)
-value = result.result()
-assert value == "done"
+    result = executor.apply(lambda: "done")
+    assert isinstance(result, AsyncResult)
+    value = result.result()
+    assert value == "done"
+
+
+async def async_main() -> None:
+    executor = TimeoutExecutor(2)
+    result = await executor.delay(sample_sync_func, 10)
+    assert isinstance(result, AsyncResult)
+
+    try:
+        value = await result.delay()
+    except Exception as exc:
+        assert isinstance(exc, TimeoutError)
+
+    result = await executor.delay(sample_async_func, 1)
+    assert isinstance(result, AsyncResult)
+    value = await result.delay()
+    assert value == "done"
+
+    result = await executor.delay(lambda: "done")
+    assert isinstance(result, AsyncResult)
+    value = await result.delay()
+    assert value == "done"
+
+
+if __name__ == "__main__":
+    main()
+    anyio.run(async_main)
 ```
 
 ## License
