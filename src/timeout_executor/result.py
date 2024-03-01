@@ -2,15 +2,16 @@ from __future__ import annotations
 
 import subprocess
 from functools import partial
-from typing import TYPE_CHECKING, Any, Generic
+from typing import TYPE_CHECKING, Any, Generic, Iterable
 
 import anyio
 import cloudpickle
 from async_wrapper import async_to_sync, sync_to_async
-from typing_extensions import TypeVar
+from typing_extensions import Self, TypeVar, override
 
 from timeout_executor.logging import logger
 from timeout_executor.serde import SerializedError, loads_error
+from timeout_executor.types import Callback, ProcessCallback
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -26,7 +27,7 @@ T = TypeVar("T", infer_variance=True)
 SENTINEL = object()
 
 
-class AsyncResult(Generic[T]):
+class AsyncResult(Callback, Generic[T]):
     """async result container"""
 
     _result: Any
@@ -35,6 +36,10 @@ class AsyncResult(Generic[T]):
         self, process: subprocess.Popen[str], executor_args: ExecutorArgs
     ) -> None:
         self._process = process
+
+        if executor_args.terminator is None:
+            raise ValueError("there is no terminator")
+
         self._executor_args = executor_args
         self._result = SENTINEL
 
@@ -131,6 +136,20 @@ class AsyncResult(Generic[T]):
 
     def __repr__(self) -> str:
         return f"<{type(self).__name__}: {self._func_name}>"
+
+    @override
+    def add_callback(self, callback: ProcessCallback) -> Self:
+        self._terminator.add_callback(callback)
+        return self
+
+    @override
+    def remove_callback(self, callback: ProcessCallback) -> Self:
+        self._terminator.remove_callback(callback)
+        return self
+
+    @override
+    def callbacks(self) -> Iterable[ProcessCallback]:
+        return self._terminator.callbacks()
 
 
 async def wait_process(
