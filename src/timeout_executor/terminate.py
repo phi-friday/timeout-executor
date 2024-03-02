@@ -8,6 +8,7 @@ from contextlib import suppress
 from itertools import chain
 from typing import Callable, Iterable
 
+from psutil import pid_exists
 from typing_extensions import Self, override
 
 from timeout_executor.logging import logger
@@ -110,9 +111,24 @@ class Terminator(Callback):
         logger.debug("%r try to terminate process from %s", self, name or "unknown")
         process = self.callback_args.process
         if process.returncode is None:
-            with suppress(ProcessLookupError):
-                process.terminate()
-                self.is_active = True
+            if pid_exists(process.pid):
+                try:
+                    process.terminate()
+                except ProcessLookupError:
+                    logger.warning(
+                        "%r process has no return code "
+                        "but cant find process :: pid: %d",
+                        self,
+                        process.pid,
+                    )
+                else:
+                    self.is_active = True
+            else:
+                logger.warning(
+                    "%r process has no return code but cant find process :: pid: %d",
+                    self,
+                    process.pid,
+                )
 
         if process.stdout is not None:
             text = process.stdout.read()
