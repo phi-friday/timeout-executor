@@ -35,7 +35,7 @@ dependencies = [
 Repository = "https://github.com/phi-friday/timeout-executor"
 
 [project.optional-dependencies]
-uvloop = ["uvloop>=0.19.0; platform_system != 'Windows'"]
+uvloop = ["uvloop; platform_system != 'Windows'"]
 
 [tool.rye]
 managed = true
