@@ -22,13 +22,13 @@ classifiers = [
 ]
 requires-python = ">= 3.8"
 dependencies = [
-    "anyio>=4.3.0",
-    "typing-extensions>=4.10.0",
+    "anyio>=4.0.0",
+    "typing-extensions>=4.4.0",
     "cloudpickle>=3.0.0",
     "async-wrapper>=0.8.3",
     "tblib>=3.0.0",
-    "exceptiongroup>=1.2.0; python_version < '3.11'",
-    "psutil>=1",
+    "exceptiongroup; python_version < '3.11'",
+    "psutil",
 ]
 
 [project.urls]
