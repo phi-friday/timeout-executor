@@ -20,20 +20,11 @@ jobs:
           fetch-depth: 0
 
       - name: Install rye
-        env:
-          RYE_INSTALL_OPTION: '--yes'
-        run: |
-          curl -sSf https://rye-up.com/get | bash
-          echo "$HOME/.rye/shims" >> $GITHUB_PATH
-
-      - name: set python version
-        id: set-python
-        run: |
-          rye config --set-bool behavior.use-uv=true
-          rye pin cpython@${{ matrix.python-version }}
-          cat .python-version
-          VERSION=$(cat .python-version)
-          echo "python_version=${VERSION}" >> $GITHUB_OUTPUT
+        uses: phi-friday/install-rye@v1
+        id: install-rye
+        with:
+          python_version: ${{ matrix.python-version }}
+          use_uv: true
 
       - name: Build package
         run: |

@@ -5,10 +5,12 @@ on:
     branches: [dev]
     paths:
       - "**.py"
+      - ".github/workflows/check.yaml"
   pull_request:
     branches: [dev, main]
     paths:
       - "**.py"
+      - ".github/workflows/check.yaml"
 
 jobs:
   build:
@@ -21,32 +23,22 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install rye
-        env:
-          RYE_INSTALL_OPTION: "--yes"
-        run: |
-          curl -sSf https://rye-up.com/get | bash
-          echo "$HOME/.rye/shims" >> $GITHUB_PATH
-
-      - name: set python version
-        id: set-python
-        run: |
-          rye config --set-bool behavior.use-uv=true
-          rye pin cpython@${{ matrix.python-version }}
-          cat .python-version
-          VERSION=$(cat .python-version)
-          echo "python_version=${VERSION}" >> $GITHUB_OUTPUT
+        uses: phi-friday/install-rye@v1
+        id: install-rye
+        with:
+          python_version: ${{ matrix.python-version }}
+          use_uv: true
 
       - name: Load cached venv
         id: cached-venv-dependencies
         uses: actions/cache@v4
         with:
           path: .venv
-          key: venv-${{ runner.os }}-${{ steps.set-python.outputs.python_version }}-${{ hashFiles('**/pyproject.toml') }}
+          key: venv-${{ runner.os }}-${{ steps.install-rye.outputs.python-version }}-${{ hashFiles('**/pyproject.toml') }}
 
       - name: Install dependencies
         if: steps.cached-venv-dependencies.outputs.cache-hit != 'true'
         run: |
-          rye pin cpython@${{ steps.set-python.outputs.python_version }}
           rye sync --all-features
 
       - name: Load cached pre-commit
@@ -54,7 +46,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/pre-commit
-          key: venv-${{ runner.os }}-${{ steps.set-python.outputs.python_version }}-${{ hashFiles('**/pyproject.toml') }}
+          key: venv-${{ runner.os }}-${{ steps.install-rye.outputs.python-version }}-${{ hashFiles('**/pyproject.toml') }}
 
       - name: Code checks
         run: |
