@@ -20,7 +20,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install rye
-        uses: phi-friday/install-rye@v1
+        uses: phi-friday/install-rye@v1.4
         id: install-rye
         with:
           python_version: ${{ matrix.python-version }}
@@ -35,5 +35,5 @@ jobs:
 
       - name: Release to PyPI
         run: |
-          rye publish --token ${{ secrets.PYPI_API_TOKEN }} --yes || \
-            echo 'Version exists'
+          rye publish --yes \
+          --username __token__ --token ${{ secrets.PYPI_API_TOKEN }}
