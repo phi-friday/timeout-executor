@@ -62,4 +62,5 @@ packages = ["src/timeout_executor"]
 include = ["src", "tests"]
 pythonVersion = '3.8'
 pythonPlatform = 'Linux'
-diagnostic = 'basic'
+diagnostic = 'strict'
+reportPrivateUsage = false
