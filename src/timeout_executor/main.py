@@ -19,7 +19,7 @@ T = TypeVar("T", infer_variance=True)
 AnyT = TypeVar("AnyT", infer_variance=True, default=Any)
 
 
-class TimeoutExecutor(Callback[..., AnyT], Generic[AnyT]):
+class TimeoutExecutor(Callback[Any, AnyT], Generic[AnyT]):
     """timeout executor"""
 
     def __init__(self, timeout: float) -> None:
