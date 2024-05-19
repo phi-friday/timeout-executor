@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from functools import wraps
 from inspect import iscoroutinefunction
 from os import environ
 from pathlib import Path
@@ -10,7 +9,6 @@ from typing import Any, Callable, Coroutine
 
 import anyio
 import cloudpickle
-from async_wrapper import async_to_sync
 from typing_extensions import ParamSpec, TypeVar
 
 from timeout_executor.const import TIMEOUT_EXECUTOR_INPUT_FILE
@@ -29,6 +27,8 @@ def run_in_subprocess() -> None:
     new_func = output_to_file(output_file)(func)
 
     if iscoroutinefunction(new_func):
+        from async_wrapper import async_to_sync
+
         new_func = async_to_sync(new_func)
 
     new_func(*args, **kwargs)
@@ -58,7 +58,6 @@ def _output_to_file_sync(
         file = file._path  # noqa: SLF001
 
     def wrapper(func: Callable[P, T]) -> Callable[P, T]:
-        @wraps(func)
         def inner(*args: P.args, **kwargs: P.kwargs) -> T:
             dump = b""
             try:
@@ -89,7 +88,6 @@ def _output_to_file_async(
     def wrapper(
         func: Callable[P, Coroutine[Any, Any, T]],
     ) -> Callable[P, Coroutine[Any, Any, T]]:
-        @wraps(func)
         async def inner(*args: P.args, **kwargs: P.kwargs) -> T:
             dump = b""
             try:
