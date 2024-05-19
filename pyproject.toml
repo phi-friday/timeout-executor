@@ -25,7 +25,7 @@ dependencies = [
     "anyio>=4.0.0",
     "typing-extensions>=4.4.0",
     "cloudpickle>=3.0.0",
-    "async-wrapper>=0.8.3",
+    "async-wrapper>=0.8.4",
     "tblib>=3.0.0",
     "exceptiongroup; python_version < '3.11'",
     "psutil",
