@@ -6,49 +6,52 @@ import threading
 from collections import deque
 from contextlib import suppress
 from itertools import chain
-from typing import Callable, Iterable
+from typing import Any, Callable, Generic, Iterable
 
 from psutil import pid_exists
-from typing_extensions import Self, override
+from typing_extensions import ParamSpec, Self, TypeVar, override
 
 from timeout_executor.logging import logger
 from timeout_executor.types import Callback, CallbackArgs, ExecutorArgs, ProcessCallback
 
 __all__ = []
 
+P = ParamSpec("P")
+T = TypeVar("T", infer_variance=True)
 
-class Terminator(Callback):
+
+class Terminator(Callback[P, T], Generic[P, T]):
     _process: subprocess.Popen[str] | None
     _callback_thread: threading.Thread | None
     _terminator_thread: threading.Thread | None
 
     def __init__(
         self,
-        executor_args_factory: Callable[[Terminator], ExecutorArgs],
-        callbacks: Callable[[], Iterable[ProcessCallback]] | None = None,
+        executor_args_factory: Callable[[Terminator[P, T]], ExecutorArgs[P, T]],
+        callbacks: Callable[[], Iterable[ProcessCallback[P, T]]] | None = None,
     ) -> None:
         self._is_active = False
         self._executor_args = executor_args_factory(self)
         self._init_callbacks = callbacks
-        self._callbacks: deque[ProcessCallback] = deque()
+        self._callbacks: deque[ProcessCallback[P, T]] = deque()
 
         self._callback_thread = None
         self._terminator_thread = None
 
-        self._callback_args = None
+        self._callback_args: CallbackArgs[P, T] | None = None
 
     @property
-    def executor_args(self) -> ExecutorArgs:
+    def executor_args(self) -> ExecutorArgs[P, T]:
         return self._executor_args
 
     @property
-    def callback_args(self) -> CallbackArgs:
+    def callback_args(self) -> CallbackArgs[P, T]:
         if self._callback_args is None:
             raise AttributeError("there is no callback args")
         return self._callback_args
 
     @callback_args.setter
-    def callback_args(self, value: CallbackArgs) -> None:
+    def callback_args(self, value: CallbackArgs[P, T]) -> None:
         if self._callback_args is not None:
             raise AttributeError("already has callback args")
         self._callback_args = value
@@ -147,13 +150,13 @@ class Terminator(Callback):
         return self._executor_args.func_name
 
     @override
-    def callbacks(self) -> Iterable[ProcessCallback]:
+    def callbacks(self) -> Iterable[ProcessCallback[P, T]]:
         if self._init_callbacks is None:
             return self._callbacks.copy()
         return chain(self._init_callbacks(), self._callbacks.copy())
 
     @override
-    def add_callback(self, callback: ProcessCallback) -> Self:
+    def add_callback(self, callback: ProcessCallback[P, T]) -> Self:
         if (
             self.is_active
             or self.callback_args.process.returncode is not None
@@ -165,13 +168,13 @@ class Terminator(Callback):
         return self
 
     @override
-    def remove_callback(self, callback: ProcessCallback) -> Self:
+    def remove_callback(self, callback: ProcessCallback[P, T]) -> Self:
         with suppress(ValueError):
             self._callbacks.remove(callback)
         return self
 
 
-def terminate(terminator: Terminator) -> None:
+def terminate(terminator: Terminator[Any, Any]) -> None:
     try:
         with suppress(TimeoutError, subprocess.TimeoutExpired):
             terminator.callback_args.process.wait(terminator.timeout)
@@ -179,7 +182,7 @@ def terminate(terminator: Terminator) -> None:
         terminator.close("terminator thread")
 
 
-def callback(terminator: Terminator) -> None:
+def callback(terminator: Terminator[Any, Any]) -> None:
     try:
         terminator.callback_args.process.wait()
     finally:

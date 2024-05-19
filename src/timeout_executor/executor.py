@@ -35,19 +35,19 @@ P2 = ParamSpec("P2")
 T2 = TypeVar("T2", infer_variance=True)
 
 
-class Executor(Callback, Generic[P, T]):
+class Executor(Callback[P, T], Generic[P, T]):
     def __init__(
         self,
         timeout: float,
         func: Callable[P, T],
-        callbacks: Callable[[], Iterable[ProcessCallback]] | None = None,
+        callbacks: Callable[[], Iterable[ProcessCallback[P, T]]] | None = None,
     ) -> None:
         self._timeout = timeout
         self._func = func
         self._func_name = func_name(func)
         self._unique_id = uuid4()
         self._init_callbacks = callbacks
-        self._callbacks: deque[ProcessCallback] = deque()
+        self._callbacks: deque[ProcessCallback[P, T]] = deque()
 
     @property
     def unique_id(self) -> UUID:
@@ -75,7 +75,7 @@ class Executor(Callback, Generic[P, T]):
     ) -> bytes:
         input_args = (self._func, args, kwargs, output_file)
         logger.debug("%r before dump input args", self)
-        input_args_as_bytes = cloudpickle.dumps(input_args)
+        input_args_as_bytes = cloudpickle.dumps(input_args)  # pyright: ignore[reportUnknownMemberType]
         logger.debug(
             "%r after dump input args :: size: %d", self, len(input_args_as_bytes)
         )
@@ -100,8 +100,8 @@ class Executor(Callback, Generic[P, T]):
         self,
         input_file: Path | anyio.Path,
         output_file: Path | anyio.Path,
-        terminator: Terminator,
-    ) -> ExecutorArgs:
+        terminator: Terminator[P, T],
+    ) -> ExecutorArgs[P, T]:
         return ExecutorArgs(
             executor=self,
             func_name=self._func_name,
@@ -116,20 +116,20 @@ class Executor(Callback, Generic[P, T]):
         input_file: Path | anyio.Path,
         output_file: Path | anyio.Path,
         stacklevel: int = 2,
-    ) -> AsyncResult[T]:
+    ) -> AsyncResult[P, T]:
         logger.debug("%r before init process", self, stacklevel=stacklevel)
         executor_args_builder = partial(
             self._create_executor_args, input_file, output_file
         )
         terminator = Terminator(executor_args_builder, self.callbacks)
         process = self._create_process(input_file, stacklevel=stacklevel + 1)
-        result = AsyncResult(process, terminator.executor_args)
+        result: AsyncResult[P, T] = AsyncResult(process, terminator.executor_args)
         terminator.callback_args = CallbackArgs(process=process, result=result)
         terminator.start()
         logger.debug("%r after init process", self, stacklevel=stacklevel)
         return result
 
-    def apply(self, *args: P.args, **kwargs: P.kwargs) -> AsyncResult[T]:
+    def apply(self, *args: P.args, **kwargs: P.kwargs) -> AsyncResult[P, T]:
         input_file, output_file = self._create_temp_files()
         input_args_as_bytes = self._dump_args(output_file, *args, **kwargs)
 
@@ -140,7 +140,7 @@ class Executor(Callback, Generic[P, T]):
 
         return self._init_process(input_file, output_file)
 
-    async def delay(self, *args: P.args, **kwargs: P.kwargs) -> AsyncResult[T]:
+    async def delay(self, *args: P.args, **kwargs: P.kwargs) -> AsyncResult[P, T]:
         input_file, output_file = self._create_temp_files()
         input_file, output_file = anyio.Path(input_file), anyio.Path(output_file)
         input_args_as_bytes = self._dump_args(output_file, *args, **kwargs)
@@ -156,18 +156,18 @@ class Executor(Callback, Generic[P, T]):
         return f"<{type(self).__name__}: {self._func_name}>"
 
     @override
-    def callbacks(self) -> Iterable[ProcessCallback]:
+    def callbacks(self) -> Iterable[ProcessCallback[P, T]]:
         if self._init_callbacks is None:
             return self._callbacks.copy()
         return chain(self._init_callbacks(), self._callbacks.copy())
 
     @override
-    def add_callback(self, callback: ProcessCallback) -> Self:
+    def add_callback(self, callback: ProcessCallback[P, T]) -> Self:
         self._callbacks.append(callback)
         return self
 
     @override
-    def remove_callback(self, callback: ProcessCallback) -> Self:
+    def remove_callback(self, callback: ProcessCallback[P, T]) -> Self:
         with suppress(ValueError):
             self._callbacks.remove(callback)
         return self
@@ -179,7 +179,7 @@ def apply_func(
     func: Callable[P2, Coroutine[Any, Any, T2]],
     *args: P2.args,
     **kwargs: P2.kwargs,
-) -> AsyncResult[T2]: ...
+) -> AsyncResult[P2, T2]: ...
 
 
 @overload
@@ -188,7 +188,7 @@ def apply_func(
     func: Callable[P2, T2],
     *args: P2.args,
     **kwargs: P2.kwargs,
-) -> AsyncResult[T2]: ...
+) -> AsyncResult[P2, T2]: ...
 
 
 def apply_func(
@@ -196,7 +196,7 @@ def apply_func(
     func: Callable[P2, Any],
     *args: P2.args,
     **kwargs: P2.kwargs,
-) -> AsyncResult[Any]:
+) -> AsyncResult[P2, Any]:
     """run function with deadline
 
     Args:
@@ -221,7 +221,7 @@ async def delay_func(
     func: Callable[P2, Coroutine[Any, Any, T2]],
     *args: P2.args,
     **kwargs: P2.kwargs,
-) -> AsyncResult[T2]: ...
+) -> AsyncResult[P2, T2]: ...
 
 
 @overload
@@ -230,7 +230,7 @@ async def delay_func(
     func: Callable[P2, T2],
     *args: P2.args,
     **kwargs: P2.kwargs,
-) -> AsyncResult[T2]: ...
+) -> AsyncResult[P2, T2]: ...
 
 
 async def delay_func(
@@ -238,7 +238,7 @@ async def delay_func(
     func: Callable[P2, Any],
     *args: P2.args,
     **kwargs: P2.kwargs,
-) -> AsyncResult[Any]:
+) -> AsyncResult[P2, Any]:
     """run function with deadline
 
     Args:

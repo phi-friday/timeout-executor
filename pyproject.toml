@@ -64,3 +64,4 @@ pythonVersion = '3.8'
 pythonPlatform = 'Linux'
 diagnostic = 'strict'
 reportPrivateUsage = false
+reportMissingTypeStubs = false

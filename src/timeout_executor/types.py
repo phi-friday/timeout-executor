@@ -4,7 +4,9 @@ import sys
 from abc import ABC, abstractmethod
 from collections import deque
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Callable, Iterable
+from typing import TYPE_CHECKING, Any, Callable, Generic, Iterable
+
+from typing_extensions import ParamSpec, TypeVar
 
 from timeout_executor.logging import logger
 
@@ -31,14 +33,17 @@ if sys.version_info >= (3, 10):
     _DATACLASS_FROZEN_KWARGS.update({"kw_only": True, "slots": True})
     _DATACLASS_NON_FROZEN_KWARGS.update({"kw_only": True, "slots": True})
 
+P = ParamSpec("P")
+T = TypeVar("T", infer_variance=True)
+
 
 @dataclass(**_DATACLASS_FROZEN_KWARGS)
-class ExecutorArgs:
+class ExecutorArgs(Generic[P, T]):
     """executor args"""
 
-    executor: Executor
+    executor: Executor[P, T]
     func_name: str
-    terminator: Terminator
+    terminator: Terminator[P, T]
     input_file: Path | anyio.Path
     output_file: Path | anyio.Path
     timeout: float
@@ -50,30 +55,30 @@ class State:
 
 
 @dataclass(**_DATACLASS_FROZEN_KWARGS)
-class CallbackArgs:
+class CallbackArgs(Generic[P, T]):
     """callback args"""
 
     process: subprocess.Popen[str]
-    result: AsyncResult
+    result: AsyncResult[P, T]
     state: State = field(init=False, default_factory=State)
 
 
-class Callback(ABC):
+class Callback(ABC, Generic[P, T]):
     """callback api interface"""
 
     @abstractmethod
-    def callbacks(self) -> Iterable[ProcessCallback]:
+    def callbacks(self) -> Iterable[ProcessCallback[P, T]]:
         """return callbacks"""
 
     @abstractmethod
-    def add_callback(self, callback: ProcessCallback) -> Self:
+    def add_callback(self, callback: ProcessCallback[P, T]) -> Self:
         """add callback"""
 
     @abstractmethod
-    def remove_callback(self, callback: ProcessCallback) -> Self:
+    def remove_callback(self, callback: ProcessCallback[P, T]) -> Self:
         """remove callback if exists"""
 
-    def run_callbacks(self, callback_args: CallbackArgs, func_name: str) -> None:
+    def run_callbacks(self, callback_args: CallbackArgs[P, T], func_name: str) -> None:
         """run all callbacks"""
         logger.debug("%r start callbacks", self)
         errors: deque[Exception] = deque()
@@ -90,4 +95,4 @@ class Callback(ABC):
             raise ExceptionGroup(error_msg, errors)
 
 
-ProcessCallback: TypeAlias = "Callable[[CallbackArgs], Any]"
+ProcessCallback: TypeAlias = "Callable[[CallbackArgs[P, T]], Any]"

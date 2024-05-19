@@ -37,7 +37,7 @@ def run_in_subprocess() -> None:
 def dumps_value(value: Any) -> bytes:
     if isinstance(value, BaseException):
         return dumps_error(value)
-    return cloudpickle.dumps(value)
+    return cloudpickle.dumps(value)  # pyright: ignore[reportUnknownMemberType]
 
 
 def output_to_file(

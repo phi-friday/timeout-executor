@@ -9,10 +9,10 @@ from typing import Any
 
 import cloudpickle
 from tblib.pickling_support import (
-    pickle_exception,
-    pickle_traceback,
-    unpickle_exception,
-    unpickle_traceback,
+    pickle_exception,  # pyright: ignore[reportUnknownVariableType]
+    pickle_traceback,  # pyright: ignore[reportUnknownVariableType]
+    unpickle_exception,  # pyright: ignore[reportUnknownVariableType]
+    unpickle_traceback,  # pyright: ignore[reportUnknownVariableType]
 )
 
 __all__ = ["dumps_error", "loads_error", "serialize_error", "deserialize_error"]
@@ -34,7 +34,7 @@ class SerializedError:
 
 
 def serialize_traceback(traceback: TracebackType) -> tuple[Any, ...]:
-    return pickle_traceback(traceback)
+    return pickle_traceback(traceback)  # pyright: ignore[reportUnknownVariableType]
 
 
 def serialize_error(error: BaseException) -> SerializedError:
@@ -84,7 +84,7 @@ def deserialize_error(error: SerializedError) -> BaseException:
             traceback = unpickle_traceback(*value)
             result.insert(index + salt, traceback)
 
-    return unpickle_exception(*arg_exception, *exception)
+    return unpickle_exception(*arg_exception, *exception)  # pyright: ignore[reportUnknownVariableType]
 
 
 def dumps_error(error: BaseException | SerializedError) -> bytes:
@@ -92,7 +92,7 @@ def dumps_error(error: BaseException | SerializedError) -> bytes:
     if not isinstance(error, SerializedError):
         error = serialize_error(error)
 
-    return cloudpickle.dumps(error)
+    return cloudpickle.dumps(error)  # pyright: ignore[reportUnknownMemberType]
 
 
 def loads_error(error: bytes | SerializedError) -> BaseException:
