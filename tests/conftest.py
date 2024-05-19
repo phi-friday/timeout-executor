@@ -14,5 +14,5 @@ import pytest
         ),
     ]
 )
-def anyio_backend(request) -> tuple[str, dict[str, Any]]:
+def anyio_backend(request: pytest.FixtureRequest) -> tuple[str, dict[str, Any]]:
     return request.param
