@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from inspect import iscoroutinefunction
 from os import environ
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
@@ -11,7 +10,10 @@ import anyio
 import cloudpickle
 from typing_extensions import ParamSpec, TypeAlias, TypeVar
 
-from timeout_executor.const import TIMEOUT_EXECUTOR_INPUT_FILE
+from timeout_executor.const import (
+    TIMEOUT_EXECUTOR_INPUT_FILE,
+    TIMEOUT_EXECUTOR_IS_ASYNC_FUNC,
+)
 from timeout_executor.serde import dumps_error
 
 if TYPE_CHECKING:
@@ -28,9 +30,11 @@ def run_in_subprocess() -> None:
     input_file = Path(environ.get(TIMEOUT_EXECUTOR_INPUT_FILE, ""))
     with input_file.open("rb") as file_io:
         func, args, kwargs, output_file = cloudpickle.load(file_io)
-    new_func = output_to_file(output_file)(func)
 
-    if iscoroutinefunction(new_func):
+    is_async = environ.get(TIMEOUT_EXECUTOR_IS_ASYNC_FUNC, "") == "1"
+    new_func = output_to_file(output_file, is_async=is_async)(func)
+
+    if is_async:
         from async_wrapper import async_to_sync
 
         new_func = async_to_sync(new_func)
@@ -45,10 +49,10 @@ def dumps_value(value: Any) -> bytes:
 
 
 def output_to_file(
-    file: Path | anyio.Path,
+    file: Path | anyio.Path, *, is_async: bool
 ) -> Callable[[Callable[P, T]], Callable[P, T]]:
     def wrapper(func: Callable[P, Any]) -> Callable[P, Any]:
-        if iscoroutinefunction(func):
+        if is_async:
             return _output_to_file_async(file)(func)
         return _output_to_file_sync(file)(func)
 

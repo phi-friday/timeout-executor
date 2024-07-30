@@ -6,8 +6,8 @@ import sys
 import tempfile
 from collections import deque
 from contextlib import suppress
-from functools import partial
-from inspect import isclass
+from functools import cached_property, partial
+from inspect import isclass, iscoroutinefunction
 from itertools import chain
 from pathlib import Path
 from types import FunctionType
@@ -18,7 +18,11 @@ import anyio
 import cloudpickle
 from typing_extensions import ParamSpec, Self, TypeAlias, TypeVar, override
 
-from timeout_executor.const import SUBPROCESS_COMMAND, TIMEOUT_EXECUTOR_INPUT_FILE
+from timeout_executor.const import (
+    SUBPROCESS_COMMAND,
+    TIMEOUT_EXECUTOR_INPUT_FILE,
+    TIMEOUT_EXECUTOR_IS_ASYNC_FUNC,
+)
 from timeout_executor.logging import logger
 from timeout_executor.result import AsyncResult
 from timeout_executor.terminate import Terminator
@@ -56,6 +60,10 @@ class Executor(Callback[P, T], Generic[P, T]):
     def unique_id(self) -> UUID:
         return self._unique_id
 
+    @cached_property
+    def is_async(self) -> bool:
+        return iscoroutinefunction(self._func)
+
     def _create_temp_files(self) -> tuple[Path, Path]:
         temp_dir = Path(tempfile.gettempdir()) / "timeout_executor"
         temp_dir.mkdir(exist_ok=True)
@@ -91,7 +99,10 @@ class Executor(Callback[P, T], Generic[P, T]):
         logger.debug("%r before create new process", self, stacklevel=stacklevel)
         process = subprocess.Popen(  # noqa: S603
             command,
-            env={TIMEOUT_EXECUTOR_INPUT_FILE: input_file.as_posix()},
+            env={
+                TIMEOUT_EXECUTOR_INPUT_FILE: input_file.as_posix(),
+                TIMEOUT_EXECUTOR_IS_ASYNC_FUNC: "1" if self.is_async else "0",
+            },
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
