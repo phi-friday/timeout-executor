@@ -46,14 +46,8 @@ class AsyncResult(Callback[P, T], Generic[P, T]):
             self._executor_args.input_file,
             self._executor_args.output_file,
         )
-
-        if not isinstance(input_file, anyio.Path):
-            input_file = anyio.Path(input_file)
-        self._input = input_file
-
-        if not isinstance(output_file, anyio.Path):
-            output_file = anyio.Path(output_file)
-        self._output = output_file
+        self._input = anyio.Path(input_file)
+        self._output = anyio.Path(output_file)
 
     @property
     def _func_name(self) -> str:
@@ -149,8 +143,7 @@ async def wait_process(
     process: subprocess.Popen[str], timeout: float, input_file: Path | anyio.Path
 ) -> None:
     wait_func = partial(sync_to_async(process.wait), timeout)
-    if not isinstance(input_file, anyio.Path):
-        input_file = anyio.Path(input_file)
+    input_file = anyio.Path(input_file)
 
     try:
         with anyio.fail_after(timeout):

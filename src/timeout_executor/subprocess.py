@@ -5,20 +5,20 @@ from __future__ import annotations
 from collections.abc import Awaitable, Coroutine
 from os import environ
 from pathlib import Path
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
 
-import anyio
 import cloudpickle
-from typing_extensions import ParamSpec, TypeAlias, TypeVar
 
 from timeout_executor.const import TIMEOUT_EXECUTOR_INPUT_FILE
-from timeout_executor.serde import dumps_error
+
+if TYPE_CHECKING:
+    from typing_extensions import ParamSpec, TypeAlias, TypeVar
+
+    P = ParamSpec("P")
+    T = TypeVar("T", infer_variance=True)
+    AnyAwaitable: TypeAlias = "Awaitable[T] | Coroutine[Any, Any, T]"
 
 __all__ = []
-
-P = ParamSpec("P")
-T = TypeVar("T", infer_variance=True)
-AnyAwaitable: TypeAlias = "Awaitable[T] | Coroutine[Any, Any, T]"
 
 
 def run_in_subprocess() -> None:
@@ -32,16 +32,13 @@ def run_in_subprocess() -> None:
 
 def dumps_value(value: Any) -> bytes:
     if isinstance(value, BaseException):
+        from timeout_executor.serde import dumps_error
+
         return dumps_error(value)
     return cloudpickle.dumps(value)
 
 
-def output_to_file(
-    file: Path | anyio.Path,
-) -> Callable[[Callable[P, T]], Callable[P, T]]:
-    if isinstance(file, anyio.Path):
-        file = file._path  # noqa: SLF001
-
+def output_to_file(file: str) -> Callable[[Callable[P, T]], Callable[P, T]]:
     def wrapper(func: Callable[P, T]) -> Callable[P, T]:
         def inner(*args: P.args, **kwargs: P.kwargs) -> T:
             dump = b""
@@ -55,7 +52,7 @@ def output_to_file(
                 dump = dumps_value(result)
                 return result
             finally:
-                with file.open("wb+") as file_io:
+                with open(file, "wb+") as file_io:  # noqa: PTH123
                     file_io.write(dump)
 
         return inner

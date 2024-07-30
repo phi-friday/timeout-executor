@@ -75,7 +75,7 @@ class Executor(Callback[P, T], Generic[P, T]):
     def _dump_args(
         self, output_file: Path | anyio.Path, *args: P.args, **kwargs: P.kwargs
     ) -> bytes:
-        input_args = (self._func, args, kwargs, output_file)
+        input_args = (self._func, args, kwargs, str(output_file))
         logger.debug("%r before dump input args", self)
         input_args_as_bytes = cloudpickle.dumps(input_args)
         logger.debug(
