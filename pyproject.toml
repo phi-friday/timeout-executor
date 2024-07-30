@@ -2,15 +2,12 @@
 name = "timeout-executor"
 version = "0.0.0"
 description = "execute with timeout"
-authors = [
-    { name = "phi", email = "phi.friday@gmail.com" }
-]
+authors = [{ name = "phi", email = "phi.friday@gmail.com" }]
 readme = "README.md"
 license = { file = "LICENSE" }
 classifiers = [
     "Development Status :: 4 - Beta",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -20,12 +17,12 @@ classifiers = [
     "Framework :: AsyncIO",
     "Framework :: Trio",
 ]
-requires-python = ">= 3.8"
+requires-python = ">= 3.9"
 dependencies = [
     "anyio>=4.0.0",
     "typing-extensions>=4.4.0",
     "cloudpickle>=3.0.0",
-    "async-wrapper>=0.8.4",
+    "async-wrapper>=0.9.0",
     "tblib>=3.0.0",
     "exceptiongroup; python_version < '3.11'",
     "psutil",
@@ -36,6 +33,7 @@ Repository = "https://github.com/phi-friday/timeout-executor"
 
 [project.optional-dependencies]
 uvloop = ["uvloop; platform_system != 'Windows'"]
+test = ["pytest>=8.0.2", "trio>=0.24.0"]
 
 [tool.rye]
 managed = true
@@ -43,9 +41,8 @@ dev-dependencies = [
     "ruff==0.4.4",
     "ipykernel>=6.29.3",
     "pre-commit>=3.5.0",
-    "pytest>=8.0.2",
     "pyyaml>=6.0.1",
-    "trio>=0.24.0",
+    "timeout-executor[uvloop,test]",
 ]
 
 [build-system]
