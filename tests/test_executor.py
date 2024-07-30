@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Awaitable
 from itertools import product
 from typing import Any
 
@@ -14,10 +15,25 @@ TEST_SIZE = 3
 pytestmark = pytest.mark.anyio
 
 
+class SomeAwaitable:
+    def __init__(self, size: int = 5, value: Any = None) -> None:
+        self.size = max(size, 5)
+        self.value = value
+
+    def __await__(self):  # noqa: ANN204
+        for _ in range(self.size):
+            yield None
+        return "done"
+
+
 class BaseExecutorTest:
     @staticmethod
     def executor(timeout: float) -> TimeoutExecutor[Any]:
         return TimeoutExecutor(timeout)
+
+    @staticmethod
+    def awaitable(size: int = 5, value: Any = None) -> Awaitable[Any]:
+        return SomeAwaitable(size, value)
 
 
 class TestExecutorSync(BaseExecutorTest):
@@ -75,6 +91,18 @@ class TestExecutorSync(BaseExecutorTest):
         pytest.raises(TimeoutError, result.result)
 
         assert result._terminator.is_active is True  # noqa: SLF001
+
+    def test_awaitable_non_coroutine(self):
+        expect = "done"
+
+        def awaitable_func() -> Awaitable[Any]:
+            return self.awaitable(value=expect)
+
+        result = self.executor(1).apply(awaitable_func)
+        assert isinstance(result, AsyncResult)
+        result = result.result()
+        assert isinstance(result, str)
+        assert result == expect
 
 
 class TestExecutorAsync(BaseExecutorTest):
@@ -136,6 +164,18 @@ class TestExecutorAsync(BaseExecutorTest):
             await result.delay()
 
         assert result._terminator.is_active is True  # noqa: SLF001
+
+    async def test_awaitable_non_coroutine(self):
+        expect = "done"
+
+        def awaitable_func() -> Awaitable[Any]:
+            return self.awaitable(value=expect)
+
+        result = await self.executor(1).delay(awaitable_func)
+        assert isinstance(result, AsyncResult)
+        result = await result.delay()
+        assert isinstance(result, str)
+        assert result == expect
 
 
 def sample_func(*args: Any, **kwargs: Any) -> tuple[tuple[Any, ...], dict[str, Any]]:

@@ -2,22 +2,17 @@
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Coroutine
 from os import environ
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable
+from typing import Any, Callable
 
 import anyio
 import cloudpickle
 from typing_extensions import ParamSpec, TypeAlias, TypeVar
 
-from timeout_executor.const import (
-    TIMEOUT_EXECUTOR_INPUT_FILE,
-    TIMEOUT_EXECUTOR_IS_ASYNC_FUNC,
-)
+from timeout_executor.const import TIMEOUT_EXECUTOR_INPUT_FILE
 from timeout_executor.serde import dumps_error
-
-if TYPE_CHECKING:
-    from collections.abc import Awaitable, Coroutine
 
 __all__ = []
 
@@ -31,14 +26,7 @@ def run_in_subprocess() -> None:
     with input_file.open("rb") as file_io:
         func, args, kwargs, output_file = cloudpickle.load(file_io)
 
-    is_async = environ.get(TIMEOUT_EXECUTOR_IS_ASYNC_FUNC, "") == "1"
-    new_func = output_to_file(output_file, is_async=is_async)(func)
-
-    if is_async:
-        from async_wrapper import async_to_sync
-
-        new_func = async_to_sync(new_func)
-
+    new_func = output_to_file(output_file)(func)
     new_func(*args, **kwargs)
 
 
@@ -49,17 +37,6 @@ def dumps_value(value: Any) -> bytes:
 
 
 def output_to_file(
-    file: Path | anyio.Path, *, is_async: bool
-) -> Callable[[Callable[P, T]], Callable[P, T]]:
-    def wrapper(func: Callable[P, Any]) -> Callable[P, Any]:
-        if is_async:
-            return _output_to_file_async(file)(func)
-        return _output_to_file_sync(file)(func)
-
-    return wrapper
-
-
-def _output_to_file_sync(
     file: Path | anyio.Path,
 ) -> Callable[[Callable[P, T]], Callable[P, T]]:
     if isinstance(file, anyio.Path):
@@ -70,6 +47,7 @@ def _output_to_file_sync(
             dump = b""
             try:
                 result = func(*args, **kwargs)
+                result = wrap_awaitable(result)
             except BaseException as exc:
                 dump = dumps_value(exc)
                 raise
@@ -85,29 +63,10 @@ def _output_to_file_sync(
     return wrapper
 
 
-def _output_to_file_async(
-    file: Path | anyio.Path,
-) -> Callable[[Callable[P, AnyAwaitable[T]]], Callable[P, Coroutine[Any, Any, T]]]:
-    if isinstance(file, Path):
-        file = anyio.Path(file)
+def wrap_awaitable(value: Any) -> Any:
+    if not isinstance(value, Awaitable):
+        return value
 
-    def wrapper(
-        func: Callable[P, AnyAwaitable[T]],
-    ) -> Callable[P, Coroutine[Any, Any, T]]:
-        async def inner(*args: P.args, **kwargs: P.kwargs) -> T:
-            dump = b""
-            try:
-                result = await func(*args, **kwargs)
-            except BaseException as exc:
-                dump = dumps_value(exc)
-                raise
-            else:
-                dump = dumps_value(result)
-                return result
-            finally:
-                async with await file.open("wb+") as file_io:
-                    await file_io.write(dump)
+    from async_wrapper import async_to_sync
 
-        return inner
-
-    return wrapper
+    return async_to_sync(value)()
