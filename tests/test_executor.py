@@ -106,12 +106,8 @@ class TestExecutorAsync:
     async def test_apply_timeout(self):
         executor = TimeoutExecutor(1)
         result = await executor.delay(anyio.sleep, 1.5)
-        try:
+        with pytest.raises(TimeoutError):
             await result.delay(0.1)
-        except Exception as exc:  # noqa: BLE001
-            assert isinstance(exc, TimeoutError)  # noqa: PT017
-        else:
-            raise Exception("TimeoutError does not occur")  # noqa: TRY002
 
     @pytest.mark.parametrize("x", range(TEST_SIZE))
     async def test_apply_lambda(self, x: int):
@@ -135,12 +131,8 @@ class TestExecutorAsync:
             raise RuntimeError("error")
 
         result = await executor.delay(lambdalike)
-        try:
+        with pytest.raises(TimeoutError):
             await result.delay(0.1)
-        except Exception as exc:  # noqa: BLE001
-            assert isinstance(exc, TimeoutError)  # noqa: PT017
-        else:
-            raise Exception("TimeoutError does not occur")  # noqa: TRY002
 
     async def test_terminator(self):
         executor = TimeoutExecutor(0.5)
@@ -150,12 +142,8 @@ class TestExecutorAsync:
 
         result = await executor.delay(temp_func)
         assert isinstance(result, AsyncResult)
-        try:
+        with pytest.raises(TimeoutError):
             await result.delay()
-        except Exception as exc:  # noqa: BLE001
-            assert isinstance(exc, TimeoutError)  # noqa: PT017
-        else:
-            raise Exception("TimeoutError does not occur")  # noqa: TRY002
 
         assert result._terminator.is_active is True  # noqa: SLF001
 
