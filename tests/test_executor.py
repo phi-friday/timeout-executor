@@ -11,12 +11,19 @@ from timeout_executor import AsyncResult, TimeoutExecutor
 
 TEST_SIZE = 3
 
+pytestmark = pytest.mark.anyio
 
-class TestExecutorSync:
+
+class BaseExecutorTest:
+    @staticmethod
+    def executor(timeout: float) -> TimeoutExecutor[Any]:
+        return TimeoutExecutor(timeout)
+
+
+class TestExecutorSync(BaseExecutorTest):
     @pytest.mark.parametrize(("x", "y"), product(range(TEST_SIZE), range(TEST_SIZE)))
     def test_apply_args(self, x: int, y: int):
-        executor = TimeoutExecutor(1)
-        result = executor.apply(sample_func, x, y)
+        result = self.executor(1).apply(sample_func, x, y)
         assert isinstance(result, AsyncResult)
         result = result.result()
         assert isinstance(result, tuple)
@@ -27,8 +34,7 @@ class TestExecutorSync:
 
     @pytest.mark.parametrize(("x", "y"), product(range(TEST_SIZE), range(TEST_SIZE)))
     def test_apply_kwargs(self, *, x: int, y: int):
-        executor = TimeoutExecutor(1)
-        result = executor.apply(sample_func, x=x, y=y)
+        result = self.executor(1).apply(sample_func, x=x, y=y)
         assert isinstance(result, AsyncResult)
         result = result.result()
         assert isinstance(result, tuple)
@@ -38,15 +44,13 @@ class TestExecutorSync:
         assert result[1] == {"x": x, "y": y}
 
     def test_apply_timeout(self):
-        executor = TimeoutExecutor(1)
-        result = executor.apply(time.sleep, 1.5)
+        result = self.executor(1).apply(time.sleep, 1.5)
         assert isinstance(result, AsyncResult)
         pytest.raises(TimeoutError, result.result)
 
     @pytest.mark.parametrize("x", range(TEST_SIZE))
     def test_apply_lambda(self, x: int):
-        executor = TimeoutExecutor(1)
-        result = executor.apply(lambda: x)
+        result = self.executor(1).apply(lambda: x)
         assert isinstance(result, AsyncResult)
         result = result.result()
         assert isinstance(result, int)
@@ -54,35 +58,29 @@ class TestExecutorSync:
 
     @pytest.mark.parametrize("x", range(TEST_SIZE))
     def test_apply_lambda_error(self, x: int):
-        executor = TimeoutExecutor(1)
-
         def temp_func(x: int) -> None:
             raise RuntimeError(x)
 
         lambda_func = lambda: temp_func(x)  # noqa: E731
-        result = executor.apply(lambda_func)
+        result = self.executor(1).apply(lambda_func)
         assert isinstance(result, AsyncResult)
         pytest.raises(RuntimeError, result.result)
 
     def test_terminator(self):
-        executor = TimeoutExecutor(0.5)
-
         def temp_func() -> None:
             time.sleep(1)
 
-        result = executor.apply(temp_func)
+        result = self.executor(0.5).apply(temp_func)
         assert isinstance(result, AsyncResult)
         pytest.raises(TimeoutError, result.result)
 
         assert result._terminator.is_active is True  # noqa: SLF001
 
 
-@pytest.mark.anyio()
-class TestExecutorAsync:
+class TestExecutorAsync(BaseExecutorTest):
     @pytest.mark.parametrize(("x", "y"), product(range(TEST_SIZE), range(TEST_SIZE)))
     async def test_apply_args(self, x: int, y: int):
-        executor = TimeoutExecutor(1)
-        result = await executor.delay(sample_async_func, x, y)
+        result = await self.executor(1).delay(sample_async_func, x, y)
         assert isinstance(result, AsyncResult)
         result = await result.delay()
         assert isinstance(result, tuple)
@@ -93,8 +91,7 @@ class TestExecutorAsync:
 
     @pytest.mark.parametrize(("x", "y"), product(range(TEST_SIZE), range(TEST_SIZE)))
     async def test_apply_kwargs(self, *, x: int, y: int):
-        executor = TimeoutExecutor(1)
-        result = await executor.delay(sample_async_func, x=x, y=y)
+        result = await self.executor(1).delay(sample_async_func, x=x, y=y)
         assert isinstance(result, AsyncResult)
         result = await result.delay()
         assert isinstance(result, tuple)
@@ -104,43 +101,36 @@ class TestExecutorAsync:
         assert result[1] == {"x": x, "y": y}
 
     async def test_apply_timeout(self):
-        executor = TimeoutExecutor(1)
-        result = await executor.delay(anyio.sleep, 1.5)
+        result = await self.executor(1).delay(anyio.sleep, 1.5)
         with pytest.raises(TimeoutError):
             await result.delay(0.1)
 
     @pytest.mark.parametrize("x", range(TEST_SIZE))
     async def test_apply_lambda(self, x: int):
-        executor = TimeoutExecutor(1)
-
         async def lambdalike() -> int:
             await anyio.sleep(0.1)
             return x
 
-        result = await executor.delay(lambdalike)
+        result = await self.executor(1).delay(lambdalike)
         assert isinstance(result, AsyncResult)
         result = await result.delay()
         assert isinstance(result, int)
         assert result == x
 
     async def test_apply_lambda_error(self):
-        executor = TimeoutExecutor(1)
-
         async def lambdalike() -> int:
             await anyio.sleep(10)
             raise RuntimeError("error")
 
-        result = await executor.delay(lambdalike)
+        result = await self.executor(1).delay(lambdalike)
         with pytest.raises(TimeoutError):
             await result.delay(0.1)
 
     async def test_terminator(self):
-        executor = TimeoutExecutor(0.5)
-
         async def temp_func() -> None:
             await anyio.sleep(1)
 
-        result = await executor.delay(temp_func)
+        result = await self.executor(0.5).delay(temp_func)
         assert isinstance(result, AsyncResult)
         with pytest.raises(TimeoutError):
             await result.delay()
