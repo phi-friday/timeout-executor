@@ -7,7 +7,6 @@ import tempfile
 from collections import deque
 from contextlib import suppress
 from functools import partial
-from inspect import isclass
 from itertools import chain
 from pathlib import Path
 from types import FunctionType
@@ -266,7 +265,15 @@ async def delay_func(
 
 
 def func_name(func: Callable[..., Any]) -> str:
-    if isinstance(func, FunctionType) or isclass(func):
+    if isinstance(func, FunctionType) or is_class(func):
         return func.__module__ + "." + func.__qualname__
     _class = type(func)
     return _class.__module__ + "." + _class.__qualname__
+
+
+def is_class(obj: Any) -> bool:
+    if isinstance(obj, type):
+        return True
+
+    meta = type(obj)
+    return issubclass(meta, type)
