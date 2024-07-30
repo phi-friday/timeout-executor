@@ -16,7 +16,7 @@ from uuid import UUID, uuid4
 
 import anyio
 import cloudpickle
-from typing_extensions import ParamSpec, Self, TypeVar, override
+from typing_extensions import ParamSpec, Self, TypeAlias, TypeVar, override
 
 from timeout_executor.const import SUBPROCESS_COMMAND, TIMEOUT_EXECUTOR_INPUT_FILE
 from timeout_executor.logging import logger
@@ -25,7 +25,7 @@ from timeout_executor.terminate import Terminator
 from timeout_executor.types import Callback, CallbackArgs, ExecutorArgs, ProcessCallback
 
 if TYPE_CHECKING:
-    from collections.abc import Coroutine, Iterable
+    from collections.abc import Awaitable, Coroutine, Iterable
 
     from timeout_executor.main import TimeoutExecutor
 
@@ -35,6 +35,7 @@ P = ParamSpec("P")
 T = TypeVar("T", infer_variance=True)
 P2 = ParamSpec("P2")
 T2 = TypeVar("T2", infer_variance=True)
+AnyAwaitable: TypeAlias = "Awaitable[T] | Coroutine[Any, Any, T]"
 
 
 class Executor(Callback[P, T], Generic[P, T]):
@@ -179,7 +180,7 @@ class Executor(Callback[P, T], Generic[P, T]):
 @overload
 def apply_func(
     timeout_or_executor: float | TimeoutExecutor,
-    func: Callable[P2, Coroutine[Any, Any, T2]],
+    func: Callable[P2, AnyAwaitable[T2]],
     *args: P2.args,
     **kwargs: P2.kwargs,
 ) -> AsyncResult[P2, T2]: ...
@@ -223,7 +224,7 @@ def apply_func(
 @overload
 async def delay_func(
     timeout_or_executor: float | TimeoutExecutor,
-    func: Callable[P2, Coroutine[Any, Any, T2]],
+    func: Callable[P2, AnyAwaitable[T2]],
     *args: P2.args,
     **kwargs: P2.kwargs,
 ) -> AsyncResult[P2, T2]: ...

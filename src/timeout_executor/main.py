@@ -4,13 +4,13 @@ from collections import deque
 from contextlib import suppress
 from typing import TYPE_CHECKING, Any, Callable, Generic, overload
 
-from typing_extensions import ParamSpec, Self, TypeVar, override
+from typing_extensions import ParamSpec, Self, TypeAlias, TypeVar, override
 
 from timeout_executor.executor import apply_func, delay_func
 from timeout_executor.types import Callback, ProcessCallback
 
 if TYPE_CHECKING:
-    from collections.abc import Coroutine, Iterable
+    from collections.abc import Awaitable, Coroutine, Iterable
 
     from timeout_executor.result import AsyncResult
 
@@ -19,6 +19,7 @@ __all__ = ["TimeoutExecutor"]
 P = ParamSpec("P")
 T = TypeVar("T", infer_variance=True)
 AnyT = TypeVar("AnyT", infer_variance=True, default=Any)
+AnyAwaitable: TypeAlias = "Awaitable[T] | Coroutine[Any, Any, T]"
 
 
 class TimeoutExecutor(Callback[Any, AnyT], Generic[AnyT]):
@@ -35,10 +36,7 @@ class TimeoutExecutor(Callback[Any, AnyT], Generic[AnyT]):
 
     @overload
     def apply(
-        self,
-        func: Callable[P, Coroutine[Any, Any, T]],
-        *args: P.args,
-        **kwargs: P.kwargs,
+        self, func: Callable[P, AnyAwaitable[T]], *args: P.args, **kwargs: P.kwargs
     ) -> AsyncResult[P, T]: ...
     @overload
     def apply(
@@ -61,10 +59,7 @@ class TimeoutExecutor(Callback[Any, AnyT], Generic[AnyT]):
 
     @overload
     async def delay(
-        self,
-        func: Callable[P, Coroutine[Any, Any, T]],
-        *args: P.args,
-        **kwargs: P.kwargs,
+        self, func: Callable[P, AnyAwaitable[T]], *args: P.args, **kwargs: P.kwargs
     ) -> AsyncResult[P, T]: ...
     @overload
     async def delay(
@@ -87,10 +82,7 @@ class TimeoutExecutor(Callback[Any, AnyT], Generic[AnyT]):
 
     @overload
     async def apply_async(
-        self,
-        func: Callable[P, Coroutine[Any, Any, T]],
-        *args: P.args,
-        **kwargs: P.kwargs,
+        self, func: Callable[P, AnyAwaitable[T]], *args: P.args, **kwargs: P.kwargs
     ) -> AsyncResult[P, T]: ...
     @overload
     async def apply_async(

@@ -9,18 +9,19 @@ from typing import TYPE_CHECKING, Any, Callable
 
 import anyio
 import cloudpickle
-from typing_extensions import ParamSpec, TypeVar
+from typing_extensions import ParamSpec, TypeAlias, TypeVar
 
 from timeout_executor.const import TIMEOUT_EXECUTOR_INPUT_FILE
 from timeout_executor.serde import dumps_error
 
 if TYPE_CHECKING:
-    from collections.abc import Coroutine
+    from collections.abc import Awaitable, Coroutine
 
 __all__ = []
 
 P = ParamSpec("P")
 T = TypeVar("T", infer_variance=True)
+AnyAwaitable: TypeAlias = "Awaitable[T] | Coroutine[Any, Any, T]"
 
 
 def run_in_subprocess() -> None:
@@ -82,14 +83,12 @@ def _output_to_file_sync(
 
 def _output_to_file_async(
     file: Path | anyio.Path,
-) -> Callable[
-    [Callable[P, Coroutine[Any, Any, T]]], Callable[P, Coroutine[Any, Any, T]]
-]:
+) -> Callable[[Callable[P, AnyAwaitable[T]]], Callable[P, Coroutine[Any, Any, T]]]:
     if isinstance(file, Path):
         file = anyio.Path(file)
 
     def wrapper(
-        func: Callable[P, Coroutine[Any, Any, T]],
+        func: Callable[P, AnyAwaitable[T]],
     ) -> Callable[P, Coroutine[Any, Any, T]]:
         async def inner(*args: P.args, **kwargs: P.kwargs) -> T:
             dump = b""
