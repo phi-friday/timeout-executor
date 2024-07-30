@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import subprocess
 from functools import partial
-from typing import TYPE_CHECKING, Any, Generic, Iterable
+from typing import TYPE_CHECKING, Any, Generic
 
 import anyio
 import cloudpickle
@@ -14,6 +14,7 @@ from timeout_executor.serde import SerializedError, loads_error
 from timeout_executor.types import Callback, ProcessCallback
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
     from pathlib import Path
 
     from timeout_executor.terminate import Terminator
@@ -125,6 +126,7 @@ class AsyncResult(Callback[P, T], Generic[P, T]):
         await self._output.parent.rmdir()
         return await self._load_output()
 
+    @override
     def __repr__(self) -> str:
         return f"<{type(self).__name__}: {self._func_name}>"
 

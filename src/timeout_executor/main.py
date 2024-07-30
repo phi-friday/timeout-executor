@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import deque
 from contextlib import suppress
-from typing import TYPE_CHECKING, Any, Callable, Coroutine, Generic, Iterable, overload
+from typing import TYPE_CHECKING, Any, Callable, Generic, overload
 
 from typing_extensions import ParamSpec, Self, TypeVar, override
 
@@ -10,6 +10,8 @@ from timeout_executor.executor import apply_func, delay_func
 from timeout_executor.types import Callback, ProcessCallback
 
 if TYPE_CHECKING:
+    from collections.abc import Coroutine, Iterable
+
     from timeout_executor.result import AsyncResult
 
 __all__ = ["TimeoutExecutor"]
@@ -49,6 +51,8 @@ class TimeoutExecutor(Callback[Any, AnyT], Generic[AnyT]):
 
         Args:
             func: func(sync or async)
+            *args: func args
+            **kwargs: func kwargs
 
         Returns:
             async result container
@@ -73,6 +77,8 @@ class TimeoutExecutor(Callback[Any, AnyT], Generic[AnyT]):
 
         Args:
             func: func(sync or async)
+            *args: func args
+            **kwargs: func kwargs
 
         Returns:
             async result container
@@ -99,12 +105,15 @@ class TimeoutExecutor(Callback[Any, AnyT], Generic[AnyT]):
 
         Args:
             func: func(sync or async)
+            *args: func args
+            **kwargs: func kwargs
 
         Returns:
             async result container
         """
         return await self.delay(func, *args, **kwargs)
 
+    @override
     def __repr__(self) -> str:
         return f"<{type(self).__name__}, timeout: {self.timeout:.2f}s>"
 

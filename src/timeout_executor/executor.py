@@ -11,7 +11,7 @@ from inspect import isclass
 from itertools import chain
 from pathlib import Path
 from types import FunctionType
-from typing import TYPE_CHECKING, Any, Callable, Coroutine, Generic, Iterable, overload
+from typing import TYPE_CHECKING, Any, Callable, Generic, overload
 from uuid import UUID, uuid4
 
 import anyio
@@ -25,6 +25,8 @@ from timeout_executor.terminate import Terminator
 from timeout_executor.types import Callback, CallbackArgs, ExecutorArgs, ProcessCallback
 
 if TYPE_CHECKING:
+    from collections.abc import Coroutine, Iterable
+
     from timeout_executor.main import TimeoutExecutor
 
 __all__ = ["apply_func", "delay_func"]
@@ -75,7 +77,7 @@ class Executor(Callback[P, T], Generic[P, T]):
     ) -> bytes:
         input_args = (self._func, args, kwargs, output_file)
         logger.debug("%r before dump input args", self)
-        input_args_as_bytes = cloudpickle.dumps(input_args)  # pyright: ignore[reportUnknownMemberType]
+        input_args_as_bytes = cloudpickle.dumps(input_args)
         logger.debug(
             "%r after dump input args :: size: %d", self, len(input_args_as_bytes)
         )
@@ -86,8 +88,8 @@ class Executor(Callback[P, T], Generic[P, T]):
     ) -> subprocess.Popen[str]:
         command = self._command(stacklevel=stacklevel + 1)
         logger.debug("%r before create new process", self, stacklevel=stacklevel)
-        process = subprocess.Popen(
-            command,  # noqa: S603
+        process = subprocess.Popen(  # noqa: S603
+            command,
             env={TIMEOUT_EXECUTOR_INPUT_FILE: input_file.as_posix()},
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -152,6 +154,7 @@ class Executor(Callback[P, T], Generic[P, T]):
 
         return self._init_process(input_file, output_file)
 
+    @override
     def __repr__(self) -> str:
         return f"<{type(self).__name__}: {self._func_name}>"
 
@@ -200,8 +203,10 @@ def apply_func(
     """run function with deadline
 
     Args:
-        timeout: deadline
+        timeout_or_executor: deadline
         func: func(sync or async)
+        *args: func args
+        **kwargs: func kwargs
 
     Returns:
         async result container
@@ -242,8 +247,10 @@ async def delay_func(
     """run function with deadline
 
     Args:
-        timeout: deadline
+        timeout_or_executor: deadline
         func: func(sync or async)
+        *args: func args
+        **kwargs: func kwargs
 
     Returns:
         async result container

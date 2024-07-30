@@ -5,7 +5,7 @@ from __future__ import annotations
 from inspect import iscoroutinefunction
 from os import environ
 from pathlib import Path
-from typing import Any, Callable, Coroutine
+from typing import TYPE_CHECKING, Any, Callable
 
 import anyio
 import cloudpickle
@@ -13,6 +13,9 @@ from typing_extensions import ParamSpec, TypeVar
 
 from timeout_executor.const import TIMEOUT_EXECUTOR_INPUT_FILE
 from timeout_executor.serde import dumps_error
+
+if TYPE_CHECKING:
+    from collections.abc import Coroutine
 
 __all__ = []
 
@@ -37,7 +40,7 @@ def run_in_subprocess() -> None:
 def dumps_value(value: Any) -> bytes:
     if isinstance(value, BaseException):
         return dumps_error(value)
-    return cloudpickle.dumps(value)  # pyright: ignore[reportUnknownMemberType]
+    return cloudpickle.dumps(value)
 
 
 def output_to_file(

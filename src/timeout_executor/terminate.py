@@ -6,13 +6,16 @@ import threading
 from collections import deque
 from contextlib import suppress
 from itertools import chain
-from typing import Any, Callable, Generic, Iterable
+from typing import TYPE_CHECKING, Any, Callable, Generic
 
 from psutil import pid_exists
 from typing_extensions import ParamSpec, Self, TypeVar, override
 
 from timeout_executor.logging import logger
 from timeout_executor.types import Callback, CallbackArgs, ExecutorArgs, ProcessCallback
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 __all__ = []
 
@@ -142,6 +145,7 @@ class Terminator(Callback[P, T], Generic[P, T]):
             if text:
                 sys.stderr.write(text)
 
+    @override
     def __repr__(self) -> str:
         return f"<{type(self).__name__}: {self.func_name}>"
 

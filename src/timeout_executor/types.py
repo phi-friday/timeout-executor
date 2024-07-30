@@ -4,17 +4,18 @@ import sys
 from abc import ABC, abstractmethod
 from collections import deque
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Callable, Generic, Iterable
+from typing import TYPE_CHECKING, Any, Callable, Generic
 
 from typing_extensions import ParamSpec, TypeVar
 
 from timeout_executor.logging import logger
 
 if sys.version_info < (3, 11):
-    from exceptiongroup import ExceptionGroup  # type: ignore
+    from exceptiongroup import ExceptionGroup
 
 if TYPE_CHECKING:
     import subprocess
+    from collections.abc import Iterable
     from pathlib import Path
 
     import anyio
