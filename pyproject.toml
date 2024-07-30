@@ -45,6 +45,12 @@ dev-dependencies = [
     "timeout-executor[uvloop,test]",
 ]
 
+[tool.rye.scripts]
+lint = { chain = ["lint:check", "lint:format"] }
+"lint:check" = "ruff check src tests --fix"
+"lint:format" = "ruff format src tests"
+check = "pre-commit run --all-files --show-diff-on-failure"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
