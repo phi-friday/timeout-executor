@@ -40,18 +40,32 @@ T = TypeVar("T", infer_variance=True)
 
 @dataclass(**_DATACLASS_FROZEN_KWARGS)
 class ExecutorArgs(Generic[P, T]):
-    """executor args"""
+    """executor args.
+
+    using in result and terminator.
+    """
 
     executor: Executor[P, T]
+    """executor self"""
     func_name: str
+    """target function name"""
     terminator: Terminator[P, T]
+    """terminator"""
     input_file: Path | anyio.Path
+    """function args input file"""
     output_file: Path | anyio.Path
+    """function result output file"""
     timeout: float
+    """timeout"""
 
 
 @dataclass(**_DATACLASS_NON_FROZEN_KWARGS)
 class State:
+    """process state.
+
+    using in callback args.
+    """
+
     value: Any = field(default=None)
 
 
@@ -60,8 +74,11 @@ class CallbackArgs(Generic[P, T]):
     """callback args"""
 
     process: subprocess.Popen[str]
+    """target process"""
     result: AsyncResult[P, T]
+    """process result"""
     state: State = field(init=False, default_factory=State)
+    """process state"""
 
 
 class Callback(ABC, Generic[P, T]):

@@ -24,6 +24,11 @@ T = TypeVar("T", infer_variance=True)
 
 
 class Terminator(Callback[P, T], Generic[P, T]):
+    """process terminator.
+
+    run callbacks and terminate process.
+    """
+
     _process: subprocess.Popen[str] | None
     _callback_thread: threading.Thread | None
     _terminator_thread: threading.Thread | None
@@ -49,6 +54,10 @@ class Terminator(Callback[P, T], Generic[P, T]):
 
     @property
     def callback_args(self) -> CallbackArgs[P, T]:
+        """callback args.
+
+        will be set in executor.
+        """
         if self._callback_args is None:
             raise AttributeError("there is no callback args")
         return self._callback_args
@@ -61,12 +70,20 @@ class Terminator(Callback[P, T], Generic[P, T]):
 
     @property
     def callback_thread(self) -> threading.Thread:
+        """callback thread.
+
+        will be set in start method.
+        """
         if self._callback_thread is None:
             raise AttributeError("there is no callback thread")
         return self._callback_thread
 
     @property
     def terminator_thread(self) -> threading.Thread:
+        """terminator thread.
+
+        will be set in start method.
+        """
         if self._terminator_thread is None:
             raise AttributeError("there is no terminator thread")
         return self._terminator_thread
@@ -77,13 +94,11 @@ class Terminator(Callback[P, T], Generic[P, T]):
 
     @property
     def is_active(self) -> bool:
+        """process is terminated or not."""
         return self._is_active
 
-    @is_active.setter
-    def is_active(self, value: bool) -> None:
-        self._is_active = value
-
     def start(self) -> None:
+        """watch process and run callbacks."""
         if self._terminator_thread is not None or self._callback_thread is not None:
             raise PermissionError("already started")
         self._start_callback_thread()
@@ -114,6 +129,7 @@ class Terminator(Callback[P, T], Generic[P, T]):
         logger.debug("%r callback thread: %d", self, self._callback_thread.ident or -1)
 
     def close(self, name: str | None = None) -> None:
+        """run callbacks and terminate process."""
         logger.debug("%r try to terminate process from %s", self, name or "unknown")
         process = self.callback_args.process
         if process.returncode is None:
@@ -128,7 +144,7 @@ class Terminator(Callback[P, T], Generic[P, T]):
                         process.pid,
                     )
                 else:
-                    self.is_active = True
+                    self._is_active = True
             else:
                 logger.warning(
                     "%r process has no return code but cant find process :: pid: %d",

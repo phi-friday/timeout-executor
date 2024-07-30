@@ -56,6 +56,7 @@ class Executor(Callback[P, T], Generic[P, T]):
         return self._unique_id
 
     def _create_temp_files(self) -> tuple[Path, Path]:
+        """create temp files for input and output"""
         temp_dir = Path(tempfile.gettempdir()) / "timeout_executor"
         temp_dir.mkdir(exist_ok=True)
 
@@ -68,6 +69,7 @@ class Executor(Callback[P, T], Generic[P, T]):
         return input_file, output_file
 
     def _command(self, stacklevel: int = 2) -> list[str]:
+        """create subprocess command"""
         command = f'{sys.executable} -c "{SUBPROCESS_COMMAND}"'
         logger.debug("%r command: %s", self, command, stacklevel=stacklevel)
         return shlex.split(command)
@@ -75,6 +77,7 @@ class Executor(Callback[P, T], Generic[P, T]):
     def _dump_args(
         self, output_file: Path | anyio.Path, *args: P.args, **kwargs: P.kwargs
     ) -> bytes:
+        """dump args and output file path to input file"""
         input_args = (self._func, args, kwargs, str(output_file))
         logger.debug("%r before dump input args", self)
         input_args_as_bytes = cloudpickle.dumps(input_args)
@@ -86,6 +89,7 @@ class Executor(Callback[P, T], Generic[P, T]):
     def _create_process(
         self, input_file: Path | anyio.Path, stacklevel: int = 2
     ) -> subprocess.Popen[str]:
+        """create new process"""
         command = self._command(stacklevel=stacklevel + 1)
         logger.debug("%r before create new process", self, stacklevel=stacklevel)
         process = subprocess.Popen(  # noqa: S603
@@ -104,6 +108,7 @@ class Executor(Callback[P, T], Generic[P, T]):
         output_file: Path | anyio.Path,
         terminator: Terminator[P, T],
     ) -> ExecutorArgs[P, T]:
+        """create executor args"""
         return ExecutorArgs(
             executor=self,
             func_name=self._func_name,
@@ -119,6 +124,22 @@ class Executor(Callback[P, T], Generic[P, T]):
         output_file: Path | anyio.Path,
         stacklevel: int = 2,
     ) -> AsyncResult[P, T]:
+        """init process.
+
+        before end process
+        ---
+        1. create terminator
+        2. create process
+        3. create result container
+        4. setup terminator
+        5. watch terminator
+
+        after end process
+        ---
+        6. end process
+        7. return result
+        8. run terminator
+        """
         logger.debug("%r before init process", self, stacklevel=stacklevel)
         executor_args_builder = partial(
             self._create_executor_args, input_file, output_file
@@ -132,6 +153,7 @@ class Executor(Callback[P, T], Generic[P, T]):
         return result
 
     def apply(self, *args: P.args, **kwargs: P.kwargs) -> AsyncResult[P, T]:
+        """run function with deadline"""
         input_file, output_file = self._create_temp_files()
         input_args_as_bytes = self._dump_args(output_file, *args, **kwargs)
 
@@ -143,6 +165,7 @@ class Executor(Callback[P, T], Generic[P, T]):
         return self._init_process(input_file, output_file)
 
     async def delay(self, *args: P.args, **kwargs: P.kwargs) -> AsyncResult[P, T]:
+        """run function with deadline"""
         input_file, output_file = self._create_temp_files()
         input_file, output_file = anyio.Path(input_file), anyio.Path(output_file)
         input_args_as_bytes = self._dump_args(output_file, *args, **kwargs)
