@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Coroutine
+from collections.abc import Awaitable
 from os import environ
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
@@ -12,11 +12,10 @@ import cloudpickle
 from timeout_executor.const import TIMEOUT_EXECUTOR_INPUT_FILE
 
 if TYPE_CHECKING:
-    from typing_extensions import ParamSpec, TypeAlias, TypeVar
+    from typing_extensions import ParamSpec, TypeVar
 
     P = ParamSpec("P")
     T = TypeVar("T", infer_variance=True)
-    AnyAwaitable: TypeAlias = "Awaitable[T] | Coroutine[Any, Any, T]"
 
 __all__ = []
 
