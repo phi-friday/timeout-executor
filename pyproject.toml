@@ -60,3 +60,6 @@ allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/timeout_executor"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/timeout_executor"]
