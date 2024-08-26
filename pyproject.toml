@@ -35,18 +35,19 @@ Repository = "https://github.com/phi-friday/timeout-executor"
 uvloop = ["uvloop; platform_system != 'Windows'"]
 test = ["pytest>=8.0.2", "trio>=0.24.0"]
 
-[tool.rye]
+[tool.uv]
 managed = true
 dev-dependencies = [
     "ruff==0.5.7",
     "ipykernel>=6.29.3",
     "pre-commit>=3.5.0",
     "pyyaml>=6.0.1",
+    "poethepoet>=0.27.0",
     "timeout-executor[uvloop,test]",
 ]
 
-[tool.rye.scripts]
-lint = { chain = ["lint:check", "lint:format"] }
+[tool.poe.tasks]
+lint = ["lint:check", "lint:format"]
 "lint:check" = "ruff check src tests --fix"
 "lint:format" = "ruff format src tests"
 check = "pre-commit run --all-files --show-diff-on-failure"
