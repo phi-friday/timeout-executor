@@ -87,6 +87,8 @@ ignore = [
     # pydocstyle # TODO
     "D100", # undocumented-public-module
     "D104", # undocumented-public-package
+    # async
+    "ASYNC109", # async-function-with-timeout
 ]
 
 [lint.per-file-ignores]

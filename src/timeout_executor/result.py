@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Generic
 
 import anyio
 import cloudpickle
+from anyio.lowlevel import checkpoint
 from async_wrapper import async_to_sync, sync_to_async
 from typing_extensions import ParamSpec, Self, TypeVar, override
 
@@ -73,6 +74,7 @@ class AsyncResult(Callback[P, T], Generic[P, T]):
         finally:
             with anyio.CancelScope(shield=True):
                 self._executor_args.terminator.close("async result")
+                await checkpoint()
 
     async def _delay(self, timeout: float) -> T:
         if self._process.returncode is not None:
