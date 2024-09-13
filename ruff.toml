@@ -114,7 +114,7 @@ quote-style = "double"
 skip-magic-trailing-comma = true
 
 [lint.isort]
-known-local-folder = ["timeout_executor"]
+known-local-folder = ["timeout_executor", "tests"]
 required-imports = ["from __future__ import annotations"]
 # ruff format
 force-single-line = false
