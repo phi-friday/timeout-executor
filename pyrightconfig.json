@@ -1,7 +1,7 @@
 {
     "include": [
         "src/timeout_executor",
-        "tests"
+        "src/tests"
     ],
     "typeCheckingMode": "strict",
     "pythonVersion": "3.9",
