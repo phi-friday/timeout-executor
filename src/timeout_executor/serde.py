@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import pickle
 import sys
 from collections import deque
+from collections.abc import Mapping
+from contextlib import suppress
 from dataclasses import dataclass
 from operator import itemgetter
 from types import TracebackType
@@ -29,6 +32,7 @@ class SerializedError:
     arg_exception: tuple[Any, ...]
     arg_tracebacks: tuple[tuple[int, tuple[Any, ...]], ...]
 
+    reduce_mapping: dict[str, bytes | tuple[Any, ...] | SerializedError]
     # TODO: reduce_args: tuple[Any, ...]
 
 
@@ -47,7 +51,7 @@ def serialize_error(error: BaseException) -> SerializedError:
     #   __reduce_ex__ args[0, 1], cause, tb [, context, suppress_context, notes])
     exception_args = exception[0]
     # reduce_args: ... __reduce_ex__ args[2:]
-    # reduce_args = exception[1:]  # noqa: ERA001
+    reduce_args = exception[1:]
 
     arg_result: deque[Any] = deque()
     arg_tracebacks: deque[tuple[int, tuple[Any, ...]]] = deque()
@@ -60,9 +64,28 @@ def serialize_error(error: BaseException) -> SerializedError:
         new = serialize_traceback(value)[1]
         arg_tracebacks.append((index, new))
 
-    # TODO: ... __reduce_ex__ args[2:]
+    reduce_arg = None
+    if reduce_args:
+        reduce_arg, reduce_args = reduce_args[0], reduce_args[1:]
+
+    reduce_mapping: dict[str, bytes | tuple[Any, ...] | SerializedError] = {}
+    if isinstance(reduce_arg, Mapping):
+        for key, value in reduce_arg.items():
+            if isinstance(value, TracebackType):
+                reduce_mapping[key] = serialize_traceback(value)[1]
+                continue
+            if isinstance(value, BaseException):
+                reduce_mapping[key] = serialize_error(value)
+                continue
+
+            with suppress(pickle.PicklingError):
+                reduce_mapping[key] = cloudpickle.dumps(value)
+
+    # TODO: ... __reduce_ex__ args[3:]
     return SerializedError(
-        arg_exception=tuple(arg_result), arg_tracebacks=tuple(arg_tracebacks)
+        arg_exception=tuple(arg_result),
+        arg_tracebacks=tuple(arg_tracebacks),
+        reduce_mapping=reduce_mapping,
     )
 
 
@@ -75,7 +98,18 @@ def deserialize_error(error: SerializedError) -> BaseException:
         traceback = unpickle_traceback(*value)
         arg_exception.insert(index + salt, traceback)
 
-    return unpickle_exception(*arg_exception)
+    result = unpickle_exception(*arg_exception)
+
+    for key, value in error.reduce_mapping.items():
+        if isinstance(value, SerializedError):
+            new = deserialize_error(value)
+        elif isinstance(value, tuple):
+            new = unpickle_traceback(*value)
+        else:
+            new = cloudpickle.loads(value)
+        setattr(result, key, new)
+
+    return result
 
 
 def dumps_error(error: BaseException | SerializedError) -> bytes:
