@@ -127,8 +127,28 @@ class TimeoutExecutor(Callback[Any, AnyT], Generic[AnyT]):
     def set_initializer(
         self, initializer: Callable[P, Any], *args: P.args, **kwargs: P.kwargs
     ) -> Self:
-        """set initializer"""
+        """set initializer
+
+        Args:
+            initializer: initializer function
+            *args: initializer args
+            **kwargs: initializer kwargs
+
+        Returns:
+            self
+        """
         self.initializer = InitializerArgs(
             function=initializer, args=args, kwargs=kwargs
         )
+        return self
+
+    def unset_initializer(self) -> Self:
+        """unset initializer
+
+        to use chain method
+
+        Returns:
+            self
+        """
+        self.initializer = None
         return self
