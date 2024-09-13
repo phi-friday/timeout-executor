@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Callable, Generic, overload
 from typing_extensions import ParamSpec, Self, TypeVar, override
 
 from timeout_executor.executor import apply_func, delay_func
-from timeout_executor.types import Callback, ProcessCallback
+from timeout_executor.types import Callback, InitializerArgs, ProcessCallback
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Iterable
@@ -27,6 +27,7 @@ class TimeoutExecutor(Callback[Any, AnyT], Generic[AnyT]):
     def __init__(self, timeout: float) -> None:
         self._timeout = timeout
         self._callbacks: deque[ProcessCallback[..., AnyT]] = deque()
+        self.initializer: InitializerArgs[..., Any] | None = None
 
     @property
     def timeout(self) -> float:
@@ -121,4 +122,13 @@ class TimeoutExecutor(Callback[Any, AnyT], Generic[AnyT]):
     def remove_callback(self, callback: ProcessCallback[..., AnyT]) -> Self:
         with suppress(ValueError):
             self._callbacks.remove(callback)
+        return self
+
+    def set_initializer(
+        self, initializer: Callable[P, Any], *args: P.args, **kwargs: P.kwargs
+    ) -> Self:
+        """set initializer"""
+        self.initializer = InitializerArgs(
+            function=initializer, args=args, kwargs=kwargs
+        )
         return self

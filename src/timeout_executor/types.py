@@ -81,6 +81,13 @@ class CallbackArgs(Generic[P, T]):
     """process state"""
 
 
+@dataclass(**_DATACLASS_NON_FROZEN_KWARGS)
+class InitializerArgs(Generic[P, T]):
+    function: Callable[P, T]
+    args: tuple[Any, ...]
+    kwargs: dict[str, Any]
+
+
 class Callback(ABC, Generic[P, T]):
     """callback api interface"""
 

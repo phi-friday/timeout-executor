@@ -17,11 +17,21 @@ import anyio
 import cloudpickle
 from typing_extensions import ParamSpec, Self, TypeVar, override
 
-from timeout_executor.const import SUBPROCESS_COMMAND, TIMEOUT_EXECUTOR_INPUT_FILE
+from timeout_executor.const import (
+    SUBPROCESS_COMMAND,
+    TIMEOUT_EXECUTOR_INIT_FILE,
+    TIMEOUT_EXECUTOR_INPUT_FILE,
+)
 from timeout_executor.logging import logger
 from timeout_executor.result import AsyncResult
 from timeout_executor.terminate import Terminator
-from timeout_executor.types import Callback, CallbackArgs, ExecutorArgs, ProcessCallback
+from timeout_executor.types import (
+    Callback,
+    CallbackArgs,
+    ExecutorArgs,
+    InitializerArgs,
+    ProcessCallback,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Iterable
@@ -42,6 +52,7 @@ class Executor(Callback[P, T], Generic[P, T]):
         timeout: float,
         func: Callable[P, T],
         callbacks: Callable[[], Iterable[ProcessCallback[P, T]]] | None = None,
+        initializer: InitializerArgs[..., Any] | None = None,
     ) -> None:
         self._timeout = timeout
         self._func = func
@@ -49,13 +60,14 @@ class Executor(Callback[P, T], Generic[P, T]):
         self._unique_id = uuid4()
         self._init_callbacks = callbacks
         self._callbacks: deque[ProcessCallback[P, T]] = deque()
+        self._initializer = initializer
 
     @property
     def unique_id(self) -> UUID:
         return self._unique_id
 
-    def _create_temp_files(self) -> tuple[Path, Path]:
-        """create temp files for input and output"""
+    def _create_temp_files(self) -> tuple[Path, Path, Path]:
+        """create temp files for input, output and init"""
         temp_dir = Path(tempfile.gettempdir()) / "timeout_executor"
         temp_dir.mkdir(exist_ok=True)
 
@@ -64,8 +76,9 @@ class Executor(Callback[P, T], Generic[P, T]):
 
         input_file = unique_dir / "input.b"
         output_file = unique_dir / "output.b"
+        init_file = unique_dir / "init.b"
 
-        return input_file, output_file
+        return input_file, output_file, init_file
 
     def _command(self, stacklevel: int = 2) -> list[str]:
         """create subprocess command"""
@@ -85,15 +98,37 @@ class Executor(Callback[P, T], Generic[P, T]):
         )
         return input_args_as_bytes
 
+    def _dump_initializer(self) -> bytes | None:
+        if self._initializer is None:
+            logger.debug("%r initializer is None", self)
+            return None
+        init_args = (
+            self._initializer.function,
+            self._initializer.args,
+            self._initializer.kwargs,
+        )
+        logger.debug("%r before dump initializer", self)
+        init_args_as_bytes = cloudpickle.dumps(init_args)
+        logger.debug(
+            "%r after dump initializer :: size: %d", self, len(init_args_as_bytes)
+        )
+        return init_args_as_bytes
+
     def _create_process(
-        self, input_file: Path | anyio.Path, stacklevel: int = 2
+        self,
+        input_file: Path | anyio.Path,
+        init_file: Path | anyio.Path | None,
+        stacklevel: int = 2,
     ) -> subprocess.Popen[str]:
         """create new process"""
         command = self._command(stacklevel=stacklevel + 1)
         logger.debug("%r before create new process", self, stacklevel=stacklevel)
         process = subprocess.Popen(  # noqa: S603
             command,
-            env={TIMEOUT_EXECUTOR_INPUT_FILE: input_file.as_posix()},
+            env={
+                TIMEOUT_EXECUTOR_INPUT_FILE: str(input_file),
+                TIMEOUT_EXECUTOR_INIT_FILE: "" if init_file is None else str(init_file),
+            },
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
@@ -121,6 +156,7 @@ class Executor(Callback[P, T], Generic[P, T]):
         self,
         input_file: Path | anyio.Path,
         output_file: Path | anyio.Path,
+        init_file: Path | anyio.Path | None,
         stacklevel: int = 2,
     ) -> AsyncResult[P, T]:
         """init process.
@@ -144,7 +180,7 @@ class Executor(Callback[P, T], Generic[P, T]):
             self._create_executor_args, input_file, output_file
         )
         terminator = Terminator(executor_args_builder, self.callbacks)
-        process = self._create_process(input_file, stacklevel=stacklevel + 1)
+        process = self._create_process(input_file, init_file, stacklevel=stacklevel + 1)
         result: AsyncResult[P, T] = AsyncResult(process, terminator.executor_args)
         terminator.callback_args = CallbackArgs(process=process, result=result)
         terminator.start()
@@ -153,7 +189,7 @@ class Executor(Callback[P, T], Generic[P, T]):
 
     def apply(self, *args: P.args, **kwargs: P.kwargs) -> AsyncResult[P, T]:
         """run function with deadline"""
-        input_file, output_file = self._create_temp_files()
+        input_file, output_file, init_file = self._create_temp_files()
         input_args_as_bytes = self._dump_args(output_file, *args, **kwargs)
 
         logger.debug("%r before write input file", self)
@@ -161,12 +197,25 @@ class Executor(Callback[P, T], Generic[P, T]):
             file.write(input_args_as_bytes)
         logger.debug("%r after write input file", self)
 
-        return self._init_process(input_file, output_file)
+        init_args_as_bytes = self._dump_initializer()
+        if init_args_as_bytes is None:
+            init_file = None
+        else:
+            logger.debug("%r before write init file", self)
+            with init_file.open("wb+") as file:
+                file.write(init_args_as_bytes)
+            logger.debug("%r after write init file", self)
+
+        return self._init_process(input_file, output_file, init_file)
 
     async def delay(self, *args: P.args, **kwargs: P.kwargs) -> AsyncResult[P, T]:
         """run function with deadline"""
-        input_file, output_file = self._create_temp_files()
-        input_file, output_file = anyio.Path(input_file), anyio.Path(output_file)
+        input_file, output_file, init_file = self._create_temp_files()
+        input_file, output_file, init_file = (
+            anyio.Path(input_file),
+            anyio.Path(output_file),
+            anyio.Path(init_file),
+        )
         input_args_as_bytes = self._dump_args(output_file, *args, **kwargs)
 
         logger.debug("%r before write input file", self)
@@ -174,7 +223,16 @@ class Executor(Callback[P, T], Generic[P, T]):
             await file.write(input_args_as_bytes)
         logger.debug("%r after write input file", self)
 
-        return self._init_process(input_file, output_file)
+        init_args_as_bytes = self._dump_initializer()
+        if init_args_as_bytes is None:
+            init_file = None
+        else:
+            logger.debug("%r before write init file", self)
+            async with await init_file.open("wb+") as file:
+                await file.write(init_args_as_bytes)
+            logger.debug("%r after write init file", self)
+
+        return self._init_process(input_file, output_file, init_file)
 
     @override
     def __repr__(self) -> str:
@@ -237,7 +295,10 @@ def apply_func(
         executor = Executor(timeout_or_executor, func)
     else:
         executor = Executor(
-            timeout_or_executor.timeout, func, timeout_or_executor.callbacks
+            timeout_or_executor.timeout,
+            func,
+            timeout_or_executor.callbacks,
+            timeout_or_executor.initializer,
         )
     return executor.apply(*args, **kwargs)
 

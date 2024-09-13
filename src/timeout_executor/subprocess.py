@@ -12,7 +12,10 @@ import anyio
 import cloudpickle
 from anyio.lowlevel import checkpoint
 
-from timeout_executor.const import TIMEOUT_EXECUTOR_INPUT_FILE
+from timeout_executor.const import (
+    TIMEOUT_EXECUTOR_INIT_FILE,
+    TIMEOUT_EXECUTOR_INPUT_FILE,
+)
 
 if TYPE_CHECKING:
     from typing_extensions import ParamSpec, TypeVar
@@ -24,6 +27,12 @@ __all__ = []
 
 
 def run_in_subprocess() -> None:
+    init_file = environ.get(TIMEOUT_EXECUTOR_INIT_FILE, "")
+    if init_file:
+        with Path(init_file).open("rb") as file_io:
+            init_func, init_args, init_kwargs = cloudpickle.load(file_io)
+        init_func(*init_args, **init_kwargs)
+
     input_file = Path(environ.get(TIMEOUT_EXECUTOR_INPUT_FILE, ""))
     with input_file.open("rb") as file_io:
         func, args, kwargs, output_file = cloudpickle.load(file_io)
