@@ -1,6 +1,6 @@
 [project]
 name = "timeout-executor"
-version = "0.0.0"
+dynamic = ["version"]
 description = "execute with timeout"
 authors = [{ name = "phi", email = "phi.friday@gmail.com" }]
 readme = "README.md"
@@ -57,11 +57,11 @@ lint = ["_lint:check", "_lint:format"]
 check = "pre-commit run --all-files --show-diff-on-failure"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
-[tool.hatch.metadata]
-allow-direct-references = true
+[tool.hatch.version]
+source = "vcs"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/timeout_executor"]
