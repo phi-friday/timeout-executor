@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+import uuid
 from collections.abc import Awaitable
 from itertools import product
 from typing import Any
@@ -13,6 +14,18 @@ from timeout_executor import AsyncResult, TimeoutExecutor
 TEST_SIZE = 3
 
 pytestmark = pytest.mark.anyio
+
+
+def sample_func(*args: Any, **kwargs: Any) -> tuple[tuple[Any, ...], dict[str, Any]]:
+    return args, kwargs
+
+
+async def sample_async_func(
+    *args: Any, **kwargs: Any
+) -> tuple[tuple[Any, ...], dict[str, Any]]:
+    await anyio.sleep(0.1)
+
+    return sample_func(*args, **kwargs)
 
 
 class SomeAwaitable:
@@ -178,13 +191,27 @@ class TestExecutorAsync(BaseExecutorTest):
         assert result == expect
 
 
-def sample_func(*args: Any, **kwargs: Any) -> tuple[tuple[Any, ...], dict[str, Any]]:
-    return args, kwargs
+def test_init_func():
+    key, value = str(uuid.uuid4()), str(uuid.uuid4())
 
+    def sample_init(key: str, value: str) -> None:
+        import os
 
-async def sample_async_func(
-    *args: Any, **kwargs: Any
-) -> tuple[tuple[Any, ...], dict[str, Any]]:
-    await anyio.sleep(0.1)
+        os.environ[key.upper()] = value
 
-    return sample_func(*args, **kwargs)
+    def get_init_if_exist(key: str) -> str:
+        import os
+
+        return os.environ.get(key.upper(), "")
+
+    executor = TimeoutExecutor(1)
+    executor.set_initializer(sample_init, key, value=value)
+    assert executor.initializer is not None
+    assert executor.initializer.function is sample_init
+    assert executor.initializer.args == (key,)
+    assert executor.initializer.kwargs == {"value": value}
+
+    async_result = executor.apply(get_init_if_exist, key)
+    result = async_result.result()
+    assert isinstance(result, str)
+    assert result == value
