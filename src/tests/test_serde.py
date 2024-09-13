@@ -1,6 +1,3 @@
-# pyright: reportUnknownParameterType=false
-# pyright: reportMissingParameterType=false
-# pyright: reportImplicitOverride=false
 from __future__ import annotations
 
 from typing import Any

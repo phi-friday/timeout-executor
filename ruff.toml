@@ -92,7 +92,7 @@ ignore = [
 ]
 
 [lint.per-file-ignores]
-"./tests/**/*.py" = [
+"./src/tests/**/*.py" = [
     "TCH001",
     "TCH002",
     "TCH003",

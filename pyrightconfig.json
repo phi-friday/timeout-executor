@@ -18,6 +18,11 @@
     "reportPrivateUsage": false,
     "reportUnnecessaryTypeIgnoreComment": true,
     "reportImplicitOverride": true,
-    "venv": ".venv",
-    "venvPath": "."
+    "executionEnvironments": [
+        {
+            "root": "src/tests",
+            "reportUnknownParameterType": false,
+            "reportMissingParameterType": false,
+        }
+    ]
 }
