@@ -55,6 +55,8 @@ class ExecutorArgs(Generic[P, T]):
     """function args input file"""
     output_file: Path | anyio.Path
     """function result output file"""
+    init_file: Path | anyio.Path | None
+    """initializer file"""
     timeout: float
     """timeout"""
 

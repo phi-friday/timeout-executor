@@ -140,6 +140,7 @@ class Executor(Callback[P, T], Generic[P, T]):
         self,
         input_file: Path | anyio.Path,
         output_file: Path | anyio.Path,
+        init_file: Path | anyio.Path | None,
         terminator: Terminator[P, T],
     ) -> ExecutorArgs[P, T]:
         """create executor args"""
@@ -149,6 +150,7 @@ class Executor(Callback[P, T], Generic[P, T]):
             terminator=terminator,
             input_file=input_file,
             output_file=output_file,
+            init_file=init_file,
             timeout=self._timeout,
         )
 
@@ -177,7 +179,7 @@ class Executor(Callback[P, T], Generic[P, T]):
         """
         logger.debug("%r before init process", self, stacklevel=stacklevel)
         executor_args_builder = partial(
-            self._create_executor_args, input_file, output_file
+            self._create_executor_args, input_file, output_file, init_file
         )
         terminator = Terminator(executor_args_builder, self.callbacks)
         process = self._create_process(input_file, init_file, stacklevel=stacklevel + 1)

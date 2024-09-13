@@ -43,12 +43,14 @@ class AsyncResult(Callback[P, T], Generic[P, T]):
         self._executor_args = executor_args
         self._result = SENTINEL
 
-        input_file, output_file = (
+        input_file, output_file, init_file = (
             self._executor_args.input_file,
             self._executor_args.output_file,
+            self._executor_args.init_file,
         )
         self._input = anyio.Path(input_file)
         self._output = anyio.Path(output_file)
+        self._init = None if init_file is None else anyio.Path(init_file)
 
     @property
     def _func_name(self) -> str:
@@ -119,6 +121,8 @@ class AsyncResult(Callback[P, T], Generic[P, T]):
         async with anyio.create_task_group() as task_group:
             task_group.start_soon(self._output.unlink, True)  # noqa: FBT003
             task_group.start_soon(self._input.unlink, True)  # noqa: FBT003
+            if self._init is not None:
+                task_group.start_soon(self._init.unlink, True)  # noqa: FBT003
         await self._output.parent.rmdir()
         return await self._load_output()
 
