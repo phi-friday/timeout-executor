@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import pickle
 import sys
 from collections import deque
 from collections.abc import Mapping
@@ -78,7 +77,7 @@ def serialize_error(error: BaseException) -> SerializedError:
                 reduce_mapping[key] = serialize_error(value)
                 continue
 
-            with suppress(pickle.PicklingError):
+            with suppress(Exception):
                 reduce_mapping[key] = cloudpickle.dumps(value)
 
     # TODO: ... __reduce_ex__ args[3:]
