@@ -29,8 +29,7 @@ class SerializedError:
     arg_exception: tuple[Any, ...]
     arg_tracebacks: tuple[tuple[int, tuple[Any, ...]], ...]
 
-    exception: tuple[Any, ...]
-    tracebacks: tuple[tuple[int, tuple[Any, ...]], ...]
+    # TODO: reduce_args: tuple[Any, ...]
 
 
 def serialize_traceback(traceback: TracebackType) -> tuple[Any, ...]:
@@ -39,33 +38,31 @@ def serialize_traceback(traceback: TracebackType) -> tuple[Any, ...]:
 
 def serialize_error(error: BaseException) -> SerializedError:
     """serialize exception"""
+    # - unpickle func,
+    # + (__reduce_ex__ args[0, 1], cause, tb [, context, suppress_context, notes]),
+    # + ... __reduce_ex__ args[2:]
     exception = pickle_exception(error)[1:]
 
-    exception_args, exception = exception[0], exception[1:]
+    # exception_args
+    #   __reduce_ex__ args[0, 1], cause, tb [, context, suppress_context, notes])
+    exception_args = exception[0]
+    # reduce_args: ... __reduce_ex__ args[2:]
+    # reduce_args = exception[1:]  # noqa: ERA001
 
     arg_result: deque[Any] = deque()
     arg_tracebacks: deque[tuple[int, tuple[Any, ...]]] = deque()
 
-    exception_result: deque[Any] = deque()
-    tracebacks: deque[tuple[int, tuple[Any, ...]]] = deque()
+    # __reduce_ex__ args[0, 1], cause, tb [, context, suppress_context, notes])
+    for index, value in enumerate(exception_args):
+        if not isinstance(value, TracebackType):
+            arg_result.append(value)
+            continue
+        new = serialize_traceback(value)[1]
+        arg_tracebacks.append((index, new))
 
-    for result, tb_result, args in zip(
-        (arg_result, exception_result),
-        (arg_tracebacks, tracebacks),
-        (exception_args, exception),
-    ):
-        for index, value in enumerate(args):
-            if not isinstance(value, TracebackType):
-                result.append(value)
-                continue
-            new = serialize_traceback(value)[1]
-            tb_result.append((index, new))
-
+    # TODO: ... __reduce_ex__ args[2:]
     return SerializedError(
-        arg_exception=tuple(arg_result),
-        arg_tracebacks=tuple(arg_tracebacks),
-        exception=tuple(exception_result),
-        tracebacks=tuple(tracebacks),
+        arg_exception=tuple(arg_result), arg_tracebacks=tuple(arg_tracebacks)
     )
 
 
@@ -74,17 +71,11 @@ def deserialize_error(error: SerializedError) -> BaseException:
     arg_exception: deque[Any] = deque(error.arg_exception)
     arg_tracebacks: deque[tuple[int, tuple[Any, ...]]] = deque(error.arg_tracebacks)
 
-    exception: deque[Any] = deque(error.exception)
-    tracebacks: deque[tuple[int, tuple[Any, ...]]] = deque(error.tracebacks)
+    for salt, (index, value) in enumerate(sorted(arg_tracebacks, key=itemgetter(0))):
+        traceback = unpickle_traceback(*value)
+        arg_exception.insert(index + salt, traceback)
 
-    for result, tb_result in zip(
-        (arg_exception, exception), (arg_tracebacks, tracebacks)
-    ):
-        for salt, (index, value) in enumerate(sorted(tb_result, key=itemgetter(0))):
-            traceback = unpickle_traceback(*value)
-            result.insert(index + salt, traceback)
-
-    return unpickle_exception(*arg_exception, *exception)
+    return unpickle_exception(*arg_exception)
 
 
 def dumps_error(error: BaseException | SerializedError) -> bytes:
