@@ -23,8 +23,6 @@ _DATACLASS_FROZEN_KWARGS: dict[str, bool] = {"frozen": True}
 if sys.version_info >= (3, 10):
     _DATACLASS_FROZEN_KWARGS.update({"kw_only": True, "slots": True})
 
-SENTINEL = object()
-
 
 @dataclass(**_DATACLASS_FROZEN_KWARGS)
 class SerializedError:
