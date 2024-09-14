@@ -3,6 +3,8 @@ from __future__ import annotations
 from collections.abc import Awaitable
 from typing import Any
 
+import anyio
+
 from timeout_executor import TimeoutExecutor
 
 
@@ -25,3 +27,17 @@ class BaseExecutorTest:
     @staticmethod
     def awaitable(size: int = 5, value: Any = None) -> Awaitable[Any]:
         return SomeAwaitable(size, value)
+
+    @staticmethod
+    def sample_func(
+        *args: Any, **kwargs: Any
+    ) -> tuple[tuple[Any, ...], dict[str, Any]]:
+        return args, kwargs
+
+    @staticmethod
+    async def sample_async_func(
+        *args: Any, **kwargs: Any
+    ) -> tuple[tuple[Any, ...], dict[str, Any]]:
+        await anyio.sleep(0.1)
+
+        return BaseExecutorTest.sample_func(*args, **kwargs)

@@ -16,22 +16,10 @@ TEST_SIZE = 3
 pytestmark = pytest.mark.anyio
 
 
-def sample_func(*args: Any, **kwargs: Any) -> tuple[tuple[Any, ...], dict[str, Any]]:
-    return args, kwargs
-
-
-async def sample_async_func(
-    *args: Any, **kwargs: Any
-) -> tuple[tuple[Any, ...], dict[str, Any]]:
-    await anyio.sleep(0.1)
-
-    return sample_func(*args, **kwargs)
-
-
 class TestExecutorSync(BaseExecutorTest):
     @pytest.mark.parametrize(("x", "y"), product(range(TEST_SIZE), range(TEST_SIZE)))
     def test_apply_args(self, x: int, y: int):
-        result = self.executor(1).apply(sample_func, x, y)
+        result = self.executor(1).apply(self.sample_func, x, y)
         assert isinstance(result, AsyncResult)
         result = result.result()
         assert isinstance(result, tuple)
@@ -42,7 +30,7 @@ class TestExecutorSync(BaseExecutorTest):
 
     @pytest.mark.parametrize(("x", "y"), product(range(TEST_SIZE), range(TEST_SIZE)))
     def test_apply_kwargs(self, *, x: int, y: int):
-        result = self.executor(1).apply(sample_func, x=x, y=y)
+        result = self.executor(1).apply(self.sample_func, x=x, y=y)
         assert isinstance(result, AsyncResult)
         result = result.result()
         assert isinstance(result, tuple)
@@ -100,7 +88,7 @@ class TestExecutorSync(BaseExecutorTest):
 class TestExecutorAsync(BaseExecutorTest):
     @pytest.mark.parametrize(("x", "y"), product(range(TEST_SIZE), range(TEST_SIZE)))
     async def test_apply_args(self, x: int, y: int):
-        result = await self.executor(1).delay(sample_async_func, x, y)
+        result = await self.executor(1).delay(self.sample_async_func, x, y)
         assert isinstance(result, AsyncResult)
         result = await result.delay()
         assert isinstance(result, tuple)
@@ -111,7 +99,7 @@ class TestExecutorAsync(BaseExecutorTest):
 
     @pytest.mark.parametrize(("x", "y"), product(range(TEST_SIZE), range(TEST_SIZE)))
     async def test_apply_kwargs(self, *, x: int, y: int):
-        result = await self.executor(1).delay(sample_async_func, x=x, y=y)
+        result = await self.executor(1).delay(self.sample_async_func, x=x, y=y)
         assert isinstance(result, AsyncResult)
         result = await result.delay()
         assert isinstance(result, tuple)
