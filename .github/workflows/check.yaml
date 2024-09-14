@@ -60,3 +60,9 @@ jobs:
 
       - name: Minimize uv cache
         run: uv cache prune --ci
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v4
+        if: matrix.python-version == '3.12'
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

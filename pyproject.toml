@@ -72,7 +72,7 @@ packages = ["src/timeout_executor"]
 include = ["src/timeout_executor"]
 
 [tool.pytest.ini_options]
-addopts = "-n 4 --cov=src/timeout_executor --cov-report html"
+addopts = "-n 4 --cov=src/timeout_executor --cov-report html --cov-report=xml"
 testpaths = ["src/tests"]
 
 [tool.coverage.report]
