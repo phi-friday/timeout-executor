@@ -17,7 +17,6 @@ from timeout_executor.types import Callback, ProcessCallback
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
-    from pathlib import Path
 
     from timeout_executor.terminate import Terminator
     from timeout_executor.types import ExecutorArgs
@@ -93,7 +92,7 @@ class AsyncResult(Callback[P, T], Generic[P, T]):
             return await self._load_output()
 
         try:
-            await wait_process(self._process, timeout, self._input)
+            await _wait_process(self._process, timeout, self._input)
         except subprocess.TimeoutExpired as exc:
             raise TimeoutError(exc.timeout) from exc
         except TimeoutError as exc:
@@ -149,11 +148,10 @@ class AsyncResult(Callback[P, T], Generic[P, T]):
         return self._terminator.callbacks()
 
 
-async def wait_process(
-    process: subprocess.Popen[str], timeout: float, input_file: Path | anyio.Path
+async def _wait_process(
+    process: subprocess.Popen[str], timeout: float, input_file: anyio.Path
 ) -> None:
     wait_func = partial(sync_to_async(process.wait), timeout)
-    input_file = anyio.Path(input_file)
 
     try:
         with anyio.fail_after(timeout):

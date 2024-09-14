@@ -18,7 +18,6 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
     from pathlib import Path
 
-    import anyio
     from typing_extensions import Self, TypeAlias
 
     from timeout_executor.executor import Executor
@@ -51,11 +50,11 @@ class ExecutorArgs(Generic[P, T]):
     """target function name"""
     terminator: Terminator[P, T]
     """terminator"""
-    input_file: Path | anyio.Path
+    input_file: Path
     """function args input file"""
-    output_file: Path | anyio.Path
+    output_file: Path
     """function result output file"""
-    init_file: Path | anyio.Path | None
+    init_file: Path | None
     """initializer file"""
     timeout: float
     """timeout"""

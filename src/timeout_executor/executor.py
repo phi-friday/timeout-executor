@@ -158,9 +158,9 @@ class Executor(Callback[P, T], Generic[P, T]):
             executor=self,
             func_name=self._func_name,
             terminator=terminator,
-            input_file=input_file,
-            output_file=output_file,
-            init_file=init_file,
+            input_file=Path(input_file),
+            output_file=Path(output_file),
+            init_file=Path(init_file) if init_file is not None else None,
             timeout=self._timeout,
         )
 
