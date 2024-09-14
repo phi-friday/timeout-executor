@@ -70,3 +70,7 @@ packages = ["src/timeout_executor"]
 
 [tool.hatch.build.targets.sdist]
 include = ["src/timeout_executor"]
+
+[tool.pytest.ini_options]
+addopts = "-n 4 --cov=src/timeout_executor --cov-report html"
+testpaths = ["src/tests"]
