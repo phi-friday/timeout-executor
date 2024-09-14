@@ -8,7 +8,8 @@ from typing import Any
 import anyio
 import pytest
 
-from timeout_executor import AsyncResult, TimeoutExecutor
+from tests.executor.base import BaseExecutorTest
+from timeout_executor import AsyncResult
 
 TEST_SIZE = 3
 
@@ -25,27 +26,6 @@ async def sample_async_func(
     await anyio.sleep(0.1)
 
     return sample_func(*args, **kwargs)
-
-
-class SomeAwaitable:
-    def __init__(self, size: int = 5, value: Any = None) -> None:
-        self.size = max(size, 5)
-        self.value = value
-
-    def __await__(self):  # noqa: ANN204
-        for _ in range(self.size):
-            yield None
-        return "done"
-
-
-class BaseExecutorTest:
-    @staticmethod
-    def executor(timeout: float) -> TimeoutExecutor[Any]:
-        return TimeoutExecutor(timeout)
-
-    @staticmethod
-    def awaitable(size: int = 5, value: Any = None) -> Awaitable[Any]:
-        return SomeAwaitable(size, value)
 
 
 class TestExecutorSync(BaseExecutorTest):
