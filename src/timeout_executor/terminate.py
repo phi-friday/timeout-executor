@@ -29,6 +29,16 @@ class Terminator(Callback[P, T], Generic[P, T]):
     run callbacks and terminate process.
     """
 
+    __slots__ = (
+        "_is_active",
+        "_executor_args",
+        "_init_callbacks",
+        "_callbacks",
+        "_callback_args",
+        "_callback_thread",
+        "_terminator_thread",
+    )
+
     _process: subprocess.Popen[str] | None
     _callback_thread: threading.Thread | None
     _terminator_thread: threading.Thread | None

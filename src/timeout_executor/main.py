@@ -24,6 +24,8 @@ AnyT = TypeVar("AnyT", infer_variance=True, default=Any)
 class TimeoutExecutor(Callback[Any, AnyT], Generic[AnyT]):
     """timeout executor"""
 
+    __slots__ = ("_timeout", "_callbacks", "initializer")
+
     def __init__(self, timeout: float) -> None:
         self._timeout = timeout
         self._callbacks: deque[ProcessCallback[..., AnyT]] = deque()

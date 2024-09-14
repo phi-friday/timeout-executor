@@ -47,6 +47,16 @@ T2 = TypeVar("T2", infer_variance=True)
 
 
 class Executor(Callback[P, T], Generic[P, T]):
+    __slots__ = (
+        "_timeout",
+        "_func",
+        "_func_name",
+        "_unique_id",
+        "_init_callbacks",
+        "_callbacks",
+        "_initializer",
+    )
+
     def __init__(
         self,
         timeout: float,
