@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import subprocess
-from functools import partial
+from functools import cached_property, partial
 from typing import TYPE_CHECKING, Any, Generic
 
 import anyio
@@ -43,15 +43,6 @@ class AsyncResult(Callback[P, T], Generic[P, T]):
         self._executor_args = executor_args
         self._result = SENTINEL
 
-        input_file, output_file, init_file = (
-            self._executor_args.input_file,
-            self._executor_args.output_file,
-            self._executor_args.init_file,
-        )
-        self._input = anyio.Path(input_file)
-        self._output = anyio.Path(output_file)
-        self._init = None if init_file is None else anyio.Path(init_file)
-
     @property
     def _func_name(self) -> str:
         return self._executor_args.func_name
@@ -59,6 +50,22 @@ class AsyncResult(Callback[P, T], Generic[P, T]):
     @property
     def _terminator(self) -> Terminator[P, T]:
         return self._executor_args.terminator
+
+    @cached_property
+    def _input(self) -> anyio.Path:
+        return anyio.Path(self._executor_args.input_file)
+
+    @cached_property
+    def _output(self) -> anyio.Path:
+        return anyio.Path(self._executor_args.output_file)
+
+    @cached_property
+    def _init(self) -> anyio.Path | None:
+        return (
+            None
+            if self._executor_args.init_file is None
+            else anyio.Path(self._executor_args.init_file)
+        )
 
     def result(self, timeout: float | None = None) -> T:
         """get value sync method"""
