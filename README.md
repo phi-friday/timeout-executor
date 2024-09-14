@@ -2,6 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![github action](https://github.com/phi-friday/timeout-executor/actions/workflows/check.yaml/badge.svg?event=push&branch=dev)](#)
+[![codecov](https://codecov.io/gh/phi-friday/timeout-executor/graph/badge.svg?token=CTXXAD3C0U)](https://codecov.io/gh/phi-friday/timeout-executor)
 [![PyPI version](https://badge.fury.io/py/timeout-executor.svg)](https://badge.fury.io/py/timeout-executor)
 [![python version](https://img.shields.io/pypi/pyversions/timeout_executor.svg)](#)
 
