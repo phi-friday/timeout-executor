@@ -2,12 +2,22 @@ from __future__ import annotations
 
 import uuid
 
+import pytest
+
 from timeout_executor import TimeoutExecutor
 
 
-def test_init_func():
-    key, value = str(uuid.uuid4()), str(uuid.uuid4())
+@pytest.fixture
+def key() -> str:
+    return str(uuid.uuid4())
 
+
+@pytest.fixture
+def value() -> str:
+    return str(uuid.uuid4())
+
+
+def test_init_func(key, value):
     executor = TimeoutExecutor(1)
     executor.set_initializer(sample_init, key, value=value)
     assert executor.initializer is not None
@@ -21,9 +31,7 @@ def test_init_func():
     assert result == value
 
 
-def test_unset_init_func():
-    key, value = str(uuid.uuid4()), str(uuid.uuid4())
-
+def test_unset_init_func(key, value):
     executor = TimeoutExecutor(1)
     executor.set_initializer(sample_init, key, value=value)
 
