@@ -81,3 +81,6 @@ exclude_lines = [
     "if TYPE_CHECKING:",
     "raise NotImplementedError",
 ]
+
+[tool.coverage.run]
+omit = ["./src/timeout_executor/subprocess.py", "./src/tests/**/*"]
