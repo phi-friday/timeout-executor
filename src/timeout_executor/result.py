@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 import subprocess
 from functools import cached_property, partial
 from typing import TYPE_CHECKING, Any, Generic
@@ -123,14 +124,8 @@ class AsyncResult(Callback[P, T], Generic[P, T]):
             value = await file.read()
             self._result = cloudpickle.loads(value)
         logger.debug("%r after load output :: size: %d", self, len(value))
-
+        await _async_rmtree(self._output.parent)
         logger.debug("%r remove temp files: %s", self, self._output.parent)
-        async with anyio.create_task_group() as task_group:
-            task_group.start_soon(self._output.unlink, True)  # noqa: FBT003
-            task_group.start_soon(self._input.unlink, True)  # noqa: FBT003
-            if self._init is not None:
-                task_group.start_soon(self._init.unlink, True)  # noqa: FBT003
-        await self._output.parent.rmdir()
         return await self._load_output()
 
     @override
@@ -165,3 +160,6 @@ async def wait_process(
         with anyio.CancelScope(shield=True):
             if process.returncode is not None:
                 await input_file.unlink(missing_ok=True)
+
+
+_async_rmtree = sync_to_async(shutil.rmtree)
