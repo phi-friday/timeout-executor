@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 __all__ = ["dumps_error", "loads_error", "serialize_error", "deserialize_error"]
 
 _DATACLASS_FROZEN_KWARGS: dict[str, bool] = {"frozen": True}
-if sys.version_info >= (3, 10):
+if sys.version_info >= (3, 10):  # pragma: no cover
     _DATACLASS_FROZEN_KWARGS.update({"kw_only": True, "slots": True})
 
 

@@ -10,7 +10,7 @@ from typing_extensions import ParamSpec, TypeVar
 
 from timeout_executor.logging import logger
 
-if sys.version_info < (3, 11):
+if sys.version_info < (3, 11):  # pragma: no cover
     from exceptiongroup import ExceptionGroup
 
 if TYPE_CHECKING:
@@ -29,7 +29,7 @@ __all__ = ["ExecutorArgs", "CallbackArgs", "ProcessCallback", "Callback"]
 
 _DATACLASS_FROZEN_KWARGS: dict[str, bool] = {"frozen": True}
 _DATACLASS_NON_FROZEN_KWARGS: dict[str, bool] = {}
-if sys.version_info >= (3, 10):
+if sys.version_info >= (3, 10):  # pragma: no cover
     _DATACLASS_FROZEN_KWARGS.update({"kw_only": True, "slots": True})
     _DATACLASS_NON_FROZEN_KWARGS.update({"kw_only": True, "slots": True})
 

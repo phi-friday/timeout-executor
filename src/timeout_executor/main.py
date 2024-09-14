@@ -92,7 +92,7 @@ class TimeoutExecutor(Callback[Any, AnyT], Generic[AnyT]):
     ) -> AsyncResult[P, T]: ...
     async def apply_async(
         self, func: Callable[P, Any], *args: P.args, **kwargs: P.kwargs
-    ) -> AsyncResult[P, Any]:
+    ) -> AsyncResult[P, Any]:  # pragma: no cover
         """run function with deadline.
 
         alias of `delay`
