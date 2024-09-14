@@ -33,19 +33,6 @@ class SerializedError:
     # TODO: reduce_args: tuple[Any, ...]
 
 
-def serialize_traceback(traceback: TracebackType | Traceback) -> SerializedTraceback:
-    if not isinstance(traceback, Traceback):
-        traceback = Traceback(traceback)
-    return traceback.as_dict()
-
-
-def deserialize_traceback(
-    serialized_traceback: SerializedTraceback,
-) -> TracebackType | None:
-    traceback = Traceback.from_dict(serialized_traceback)
-    return traceback.as_traceback()
-
-
 def serialize_error(error: BaseException) -> SerializedError:
     """serialize exception"""
     # - unpickle func,
@@ -67,7 +54,7 @@ def serialize_error(error: BaseException) -> SerializedError:
         if not isinstance(value, (TracebackType, Traceback)):
             arg_result.append(value)
             continue
-        new = serialize_traceback(value)
+        new = _serialize_traceback(value)
         arg_tracebacks.append((index, new))
 
     reduce_arg = None
@@ -78,7 +65,7 @@ def serialize_error(error: BaseException) -> SerializedError:
     if isinstance(reduce_arg, Mapping):
         for key, value in reduce_arg.items():
             if isinstance(value, (TracebackType, Traceback)):
-                reduce_mapping[key] = serialize_traceback(value)
+                reduce_mapping[key] = _serialize_traceback(value)
                 continue
             if isinstance(value, BaseException):
                 reduce_mapping[key] = serialize_error(value)
@@ -101,7 +88,7 @@ def deserialize_error(error: SerializedError) -> BaseException:
     arg_tracebacks: deque[tuple[int, SerializedTraceback]] = deque(error.arg_tracebacks)
 
     for salt, (index, value) in enumerate(sorted(arg_tracebacks, key=itemgetter(0))):
-        traceback = deserialize_traceback(value)
+        traceback = _deserialize_traceback(value)
         arg_exception.insert(index + salt, traceback)
 
     result = unpickle_exception(*arg_exception)
@@ -110,7 +97,7 @@ def deserialize_error(error: SerializedError) -> BaseException:
         if isinstance(value, SerializedError):
             new = deserialize_error(value)
         elif isinstance(value, dict):
-            new = deserialize_traceback(value)
+            new = _deserialize_traceback(value)
         else:
             new = cloudpickle.loads(value)
         setattr(result, key, new)
@@ -135,3 +122,16 @@ def loads_error(error: bytes | SerializedError) -> BaseException:
         raise TypeError(error_msg)
 
     return deserialize_error(error)
+
+
+def _serialize_traceback(traceback: TracebackType | Traceback) -> SerializedTraceback:
+    if not isinstance(traceback, Traceback):
+        traceback = Traceback(traceback)
+    return traceback.as_dict()
+
+
+def _deserialize_traceback(
+    serialized_traceback: SerializedTraceback,
+) -> TracebackType | None:
+    traceback = Traceback.from_dict(serialized_traceback)
+    return traceback.as_traceback()
