@@ -7,15 +7,15 @@ from contextlib import suppress
 from dataclasses import dataclass
 from operator import itemgetter
 from types import TracebackType
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import cloudpickle
-from tblib.pickling_support import (
-    pickle_exception,
-    pickle_traceback,
-    unpickle_exception,
-    unpickle_traceback,
-)
+from tblib import Traceback
+from tblib.pickling_support import pickle_exception, unpickle_exception
+from typing_extensions import TypeAlias
+
+if TYPE_CHECKING:
+    SerializedTraceback: TypeAlias = dict[str, Any]
 
 __all__ = ["dumps_error", "loads_error", "serialize_error", "deserialize_error"]
 
@@ -29,14 +29,23 @@ SENTINEL = object()
 @dataclass(**_DATACLASS_FROZEN_KWARGS)
 class SerializedError:
     arg_exception: tuple[Any, ...]
-    arg_tracebacks: tuple[tuple[int, tuple[Any, ...]], ...]
+    arg_tracebacks: tuple[tuple[int, SerializedTraceback], ...]
 
-    reduce_mapping: dict[str, bytes | tuple[Any, ...] | SerializedError]
+    reduce_mapping: dict[str, bytes | SerializedTraceback | SerializedError]
     # TODO: reduce_args: tuple[Any, ...]
 
 
-def serialize_traceback(traceback: TracebackType) -> tuple[Any, ...]:
-    return pickle_traceback(traceback)
+def serialize_traceback(traceback: TracebackType | Traceback) -> SerializedTraceback:
+    if not isinstance(traceback, Traceback):
+        traceback = Traceback(traceback)
+    return traceback.as_dict()
+
+
+def deserialize_traceback(
+    serialized_traceback: SerializedTraceback,
+) -> TracebackType | None:
+    traceback = Traceback.from_dict(serialized_traceback)
+    return traceback.as_traceback()
 
 
 def serialize_error(error: BaseException) -> SerializedError:
@@ -53,25 +62,25 @@ def serialize_error(error: BaseException) -> SerializedError:
     reduce_args = exception[1:]
 
     arg_result: deque[Any] = deque()
-    arg_tracebacks: deque[tuple[int, tuple[Any, ...]]] = deque()
+    arg_tracebacks: deque[tuple[int, SerializedTraceback]] = deque()
 
     # __reduce_ex__ args[0, 1], cause, tb [, context, suppress_context, notes])
     for index, value in enumerate(exception_args):
-        if not isinstance(value, TracebackType):
+        if not isinstance(value, (TracebackType, Traceback)):
             arg_result.append(value)
             continue
-        new = serialize_traceback(value)[1]
+        new = serialize_traceback(value)
         arg_tracebacks.append((index, new))
 
     reduce_arg = None
     if reduce_args:
         reduce_arg, reduce_args = reduce_args[0], reduce_args[1:]
 
-    reduce_mapping: dict[str, bytes | tuple[Any, ...] | SerializedError] = {}
+    reduce_mapping: dict[str, bytes | SerializedTraceback | SerializedError] = {}
     if isinstance(reduce_arg, Mapping):
         for key, value in reduce_arg.items():
-            if isinstance(value, TracebackType):
-                reduce_mapping[key] = serialize_traceback(value)[1]
+            if isinstance(value, (TracebackType, Traceback)):
+                reduce_mapping[key] = serialize_traceback(value)
                 continue
             if isinstance(value, BaseException):
                 reduce_mapping[key] = serialize_error(value)
@@ -91,10 +100,10 @@ def serialize_error(error: BaseException) -> SerializedError:
 def deserialize_error(error: SerializedError) -> BaseException:
     """deserialize exception"""
     arg_exception: deque[Any] = deque(error.arg_exception)
-    arg_tracebacks: deque[tuple[int, tuple[Any, ...]]] = deque(error.arg_tracebacks)
+    arg_tracebacks: deque[tuple[int, SerializedTraceback]] = deque(error.arg_tracebacks)
 
     for salt, (index, value) in enumerate(sorted(arg_tracebacks, key=itemgetter(0))):
-        traceback = unpickle_traceback(*value)
+        traceback = deserialize_traceback(value)
         arg_exception.insert(index + salt, traceback)
 
     result = unpickle_exception(*arg_exception)
@@ -102,8 +111,8 @@ def deserialize_error(error: SerializedError) -> BaseException:
     for key, value in error.reduce_mapping.items():
         if isinstance(value, SerializedError):
             new = deserialize_error(value)
-        elif isinstance(value, tuple):
-            new = unpickle_traceback(*value)
+        elif isinstance(value, dict):
+            new = deserialize_traceback(value)
         else:
             new = cloudpickle.loads(value)
         setattr(result, key, new)
