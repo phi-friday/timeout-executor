@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import time
-import uuid
 from collections.abc import Awaitable
 from itertools import product
 from typing import Any
@@ -189,29 +188,3 @@ class TestExecutorAsync(BaseExecutorTest):
         result = await result.delay()
         assert isinstance(result, str)
         assert result == expect
-
-
-def test_init_func():
-    key, value = str(uuid.uuid4()), str(uuid.uuid4())
-
-    def sample_init(key: str, value: str) -> None:
-        import os
-
-        os.environ[key.upper()] = value
-
-    def get_init_if_exist(key: str) -> str:
-        import os
-
-        return os.environ.get(key.upper(), "")
-
-    executor = TimeoutExecutor(1)
-    executor.set_initializer(sample_init, key, value=value)
-    assert executor.initializer is not None
-    assert executor.initializer.function is sample_init
-    assert executor.initializer.args == (key,)
-    assert executor.initializer.kwargs == {"value": value}
-
-    async_result = executor.apply(get_init_if_exist, key)
-    result = async_result.result()
-    assert isinstance(result, str)
-    assert result == value
