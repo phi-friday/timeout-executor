@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import os
 import time
+import uuid
 from collections.abc import Awaitable
 from itertools import product
 from typing import Any
@@ -9,7 +11,7 @@ import anyio
 import pytest
 
 from tests.executor.base import BaseExecutorTest
-from timeout_executor import AsyncResult
+from timeout_executor import AsyncResult, TimeoutExecutor
 
 TEST_SIZE = 3
 
@@ -156,3 +158,16 @@ class TestExecutorAsync(BaseExecutorTest):
         result = await result.delay()
         assert isinstance(result, str)
         assert result == expect
+
+
+def test_environment_variable():
+    key, value = "E" + uuid.uuid4().hex.upper(), str(uuid.uuid4())
+    os.environ[key] = value
+
+    def func() -> bool:
+        import os
+
+        return os.environ.get(key) == value
+
+    result = TimeoutExecutor(1).apply(func)
+    assert result.result() is True

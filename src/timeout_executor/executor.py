@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import shlex
 import subprocess
 import sys
@@ -135,7 +136,8 @@ class Executor(Callback[P, T], Generic[P, T]):
         logger.debug("%r before create new process", self, stacklevel=stacklevel)
         process = subprocess.Popen(  # noqa: S603
             command,
-            env={
+            env=os.environ
+            | {
                 TIMEOUT_EXECUTOR_INPUT_FILE: str(input_file),
                 TIMEOUT_EXECUTOR_INIT_FILE: "" if init_file is None else str(init_file),
             },
