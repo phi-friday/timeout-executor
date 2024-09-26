@@ -69,6 +69,11 @@ class AsyncResult(Callback[P, T], Generic[P, T]):
             else anyio.Path(self._executor_args.init_file)
         )
 
+    @property
+    def has_result(self) -> bool:
+        """check if result is available"""
+        return self._result is not SENTINEL
+
     @overload
     def wait(
         self, timeout: float | None = None, *, do_async: Literal[True] = ...
@@ -125,7 +130,7 @@ class AsyncResult(Callback[P, T], Generic[P, T]):
         return await self._load_output()
 
     async def _load_output(self) -> T:
-        if self._result is not SENTINEL:
+        if self.has_result:
             logger.debug("%r has result.", self)
             if isinstance(self._result, SerializedError):
                 self._result = loads_error(self._result)
