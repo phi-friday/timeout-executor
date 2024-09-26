@@ -75,12 +75,14 @@ class AsyncResult(Callback[P, T], Generic[P, T]):
         return self._result is not SENTINEL
 
     @overload
+    def wait(self, timeout: float | None = None) -> Awaitable[None]: ...
+    @overload
     def wait(
-        self, timeout: float | None = None, *, do_async: Literal[True] = ...
+        self, timeout: float | None = None, *, do_async: Literal[True]
     ) -> Awaitable[None]: ...
     @overload
     def wait(
-        self, timeout: float | None = None, *, do_async: Literal[False] = ...
+        self, timeout: float | None = None, *, do_async: Literal[False]
     ) -> None: ...
     @overload
     def wait(
