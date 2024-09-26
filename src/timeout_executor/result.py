@@ -3,7 +3,7 @@ from __future__ import annotations
 import shutil
 import subprocess
 from functools import cached_property, partial
-from typing import TYPE_CHECKING, Any, Generic
+from typing import TYPE_CHECKING, Any, Generic, Literal, overload
 
 import anyio
 import cloudpickle
@@ -16,7 +16,7 @@ from timeout_executor.serde import SerializedError, loads_error
 from timeout_executor.types import Callback, ProcessCallback
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Awaitable, Iterable
 
     from timeout_executor.terminate import Terminator
     from timeout_executor.types import ExecutorArgs
@@ -69,6 +69,28 @@ class AsyncResult(Callback[P, T], Generic[P, T]):
             else anyio.Path(self._executor_args.init_file)
         )
 
+    @overload
+    def wait(
+        self, timeout: float | None = None, *, do_async: Literal[True] = ...
+    ) -> Awaitable[None]: ...
+    @overload
+    def wait(
+        self, timeout: float | None = None, *, do_async: Literal[False] = ...
+    ) -> None: ...
+    @overload
+    def wait(
+        self, timeout: float | None = None, *, do_async: bool = ...
+    ) -> None | Awaitable[None]: ...
+    def wait(
+        self, timeout: float | None = None, *, do_async: bool = True
+    ) -> None | Awaitable[None]:
+        """wait for process to finish"""
+        if timeout is None:
+            timeout = self._executor_args.timeout
+        if do_async:
+            return self._wait(timeout)
+        return async_to_sync(self._wait)(timeout)
+
     def result(self, timeout: float | None = None) -> T:
         """get value sync method"""
         future = async_to_sync(self.delay)
@@ -80,18 +102,15 @@ class AsyncResult(Callback[P, T], Generic[P, T]):
             timeout = self._executor_args.timeout
 
         try:
-            logger.debug("%r wait process :: deadline: %.2fs", self, timeout)
             return await self._delay(timeout)
         finally:
             with anyio.CancelScope(shield=True):
                 self._executor_args.terminator.close("async result")
                 await checkpoint()
 
-    async def _delay(self, timeout: float) -> T:
-        if self._process.returncode is not None:
-            return await self._load_output()
-
+    async def _wait(self, timeout: float) -> None:
         try:
+            logger.debug("%r wait process :: deadline: %.2fs", self, timeout)
             await _wait_process(self._process, timeout, self._input)
         except subprocess.TimeoutExpired as exc:
             raise TimeoutError(exc.timeout) from exc
@@ -100,6 +119,9 @@ class AsyncResult(Callback[P, T], Generic[P, T]):
                 raise TimeoutError(timeout) from exc
             raise
 
+    async def _delay(self, timeout: float) -> T:
+        if self._process.returncode is None:
+            await self.wait(timeout, do_async=True)
         return await self._load_output()
 
     async def _load_output(self) -> T:
