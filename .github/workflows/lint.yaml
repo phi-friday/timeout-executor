@@ -7,6 +7,7 @@ on:
       - "**.py"
       - ".github/workflows/lint.yaml"
       - "pyproject.toml"
+      - "ruff.toml"
       - "pyrightconfig.json"
       - ".pre-commit-config.yaml"
   pull_request:
@@ -15,6 +16,7 @@ on:
       - "**.py"
       - ".github/workflows/lint.yaml"
       - "pyproject.toml"
+      - "ruff.toml"
       - "pyrightconfig.json"
       - ".pre-commit-config.yaml"
 
