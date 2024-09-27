@@ -270,6 +270,81 @@ class Executor(Callback[P, T], Generic[P, T]):
         return self
 
 
+class JinjaExecutor(Executor[P, T], Generic[P, T]):
+    __slots__ = (*Executor.__slots__, "_j2_script")
+    _j2_script: Path | None
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self._j2_script = None
+
+    def _cleanup(self, *args: Any, **kwargs: Any) -> None:  # noqa: ARG002
+        if self._j2_script is None:
+            return
+        with suppress(FileNotFoundError):
+            self._j2_script.unlink()
+        self._j2_script = None
+
+    @override
+    def _dump_args(
+        self, output_file: Path | anyio.Path, *args: P.args, **kwargs: P.kwargs
+    ) -> bytes:
+        """dump args and output file path to input file"""
+        input_args = (None, args, kwargs, str(output_file))
+        logger.debug("%r before dump input args", self)
+        input_args_as_bytes = cloudpickle.dumps(input_args)
+        logger.debug(
+            "%r after dump input args :: size: %d", self, len(input_args_as_bytes)
+        )
+        return input_args_as_bytes
+
+    @override
+    def _dump_initializer(self) -> bytes | None:
+        if self._initializer is None:
+            logger.debug("%r initializer is None", self)
+            return None
+        init_args = (None, self._initializer.args, self._initializer.kwargs)
+        logger.debug("%r before dump initializer", self)
+        init_args_as_bytes = cloudpickle.dumps(init_args)
+        logger.debug(
+            "%r after dump initializer :: size: %d", self, len(init_args_as_bytes)
+        )
+        return init_args_as_bytes
+
+    @override
+    def callbacks(self) -> Iterable[Callable[[CallbackArgs[P, T]], Any]]:
+        callbacks = super().callbacks()
+        return chain([self._cleanup], callbacks)
+
+    @override
+    def _command(self, stacklevel: int = 2) -> list[str]:
+        j2_script = self._render_jinja_subprocess()
+        self._j2_script = Path(tempfile.gettempdir()) / str(uuid4())
+        with self._j2_script.open("w+") as file:
+            file.write(j2_script)
+        command = f"{sys.executable} {self._j2_script}"
+        logger.debug("%r command: %s", self, command, stacklevel=stacklevel)
+        return shlex.split(command)
+
+    def _render_jinja_subprocess(self) -> str:
+        import jinja2
+
+        if self._initializer is None:
+            init_func_code = "    def empty_initializer(): pass"
+            init_func_name = "empty_initializer"
+        else:
+            init_func_code, init_func_name = parse_func_code(self._initializer.function)
+        func_code, func_name = parse_func_code(self._func)
+        with Path(__file__).with_name("subprocess_jinja.py.j2").open("r") as file:
+            source = file.read()
+        return jinja2.Template(source).render(
+            func_code=func_code,
+            func_name=func_name,
+            init_func_code=init_func_code,
+            init_func_name=init_func_name,
+        )
+
+
 @overload
 def apply_func(
     timeout_or_executor: float | TimeoutExecutor,
@@ -305,10 +380,17 @@ def apply_func(
     Returns:
         async result container
     """
+    executor_type = (
+        JinjaExecutor
+        if not isinstance(timeout_or_executor, (int, float))
+        and timeout_or_executor.use_jinja
+        else Executor
+    )
+
     if isinstance(timeout_or_executor, (float, int)):
-        executor = Executor(timeout_or_executor, func)
+        executor = executor_type(timeout_or_executor, func)
     else:
-        executor = Executor(
+        executor = executor_type(
             timeout_or_executor.timeout,
             func,
             timeout_or_executor.callbacks,
@@ -352,10 +434,17 @@ async def delay_func(
     Returns:
         async result container
     """
+    executor_type = (
+        JinjaExecutor
+        if not isinstance(timeout_or_executor, (int, float))
+        and timeout_or_executor.use_jinja
+        else Executor
+    )
+
     if isinstance(timeout_or_executor, (float, int)):
-        executor = Executor(timeout_or_executor, func)
+        executor = executor_type(timeout_or_executor, func)
     else:
-        executor = Executor(
+        executor = executor_type(
             timeout_or_executor.timeout, func, timeout_or_executor.callbacks
         )
     return await executor.delay(*args, **kwargs)
@@ -374,3 +463,14 @@ def is_class(obj: Any) -> bool:
 
     meta = type(obj)
     return issubclass(meta, type)
+
+
+def parse_func_code(func: Callable[..., Any]) -> tuple[str, str]:
+    import inspect
+    import textwrap
+
+    source = inspect.getsource(func)
+    source = textwrap.dedent(source)
+    source = textwrap.indent(source, "    ")
+
+    return source, func.__name__

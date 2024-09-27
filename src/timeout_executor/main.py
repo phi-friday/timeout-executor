@@ -24,12 +24,13 @@ AnyT = TypeVar("AnyT", infer_variance=True, default=Any)
 class TimeoutExecutor(Callback[Any, AnyT], Generic[AnyT]):
     """timeout executor"""
 
-    __slots__ = ("_timeout", "_callbacks", "initializer")
+    __slots__ = ("_timeout", "_callbacks", "initializer", "use_jinja")
 
-    def __init__(self, timeout: float) -> None:
+    def __init__(self, timeout: float, *, use_jinja: bool = False) -> None:
         self._timeout = timeout
         self._callbacks: deque[ProcessCallback[..., AnyT]] = deque()
         self.initializer: InitializerArgs[..., Any] | None = None
+        self.use_jinja = use_jinja
 
     @property
     def timeout(self) -> float:
