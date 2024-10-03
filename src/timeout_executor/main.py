@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import deque
 from contextlib import suppress
+from importlib.util import find_spec
 from typing import TYPE_CHECKING, Any, Callable, Generic, overload
 
 from typing_extensions import ParamSpec, Self, TypeVar, override
@@ -24,7 +25,7 @@ AnyT = TypeVar("AnyT", infer_variance=True, default=Any)
 class TimeoutExecutor(Callback[Any, AnyT], Generic[AnyT]):
     """timeout executor"""
 
-    __slots__ = ("_timeout", "_callbacks", "initializer", "use_jinja")
+    __slots__ = ("_timeout", "_callbacks", "initializer", "_use_jinja")
 
     def __init__(self, timeout: float, *, use_jinja: bool = False) -> None:
         self._timeout = timeout
@@ -36,6 +37,23 @@ class TimeoutExecutor(Callback[Any, AnyT], Generic[AnyT]):
     def timeout(self) -> float:
         """deadline"""
         return self._timeout
+
+    @property
+    def use_jinja(self) -> bool:
+        """use jinja"""
+        return self._use_jinja
+
+    @use_jinja.setter
+    def use_jinja(self, value: bool) -> None:
+        self._use_jinja = value
+        if value:
+            spec = find_spec("jinja2")
+            if spec is None:  # pragma: no cover
+                error_msg = (
+                    "Please install the dependencies "
+                    "by running 'pip install timeout_executor[jinja]'."
+                )
+                raise ImportError(error_msg)
 
     @overload
     def apply(
