@@ -99,6 +99,10 @@ class Executor(Callback[P, T], Generic[P, T]):
         logger.debug("%r command: %s", self, command, stacklevel=stacklevel)
         return shlex.split(command)
 
+    async def _command_async(self, stacklevel: int = 2) -> list[str]:
+        """create subprocess command"""
+        raise NotImplementedError
+
     def _dump_args(
         self, output_file: Path | anyio.Path, *args: P.args, **kwargs: P.kwargs
     ) -> bytes:
@@ -129,12 +133,12 @@ class Executor(Callback[P, T], Generic[P, T]):
 
     def _create_process(
         self,
+        command: list[str],
         input_file: Path | anyio.Path,
         init_file: Path | anyio.Path | None,
         stacklevel: int = 2,
     ) -> subprocess.Popen[str]:
         """create new process"""
-        command = self._command(stacklevel=stacklevel + 1)
         logger.debug("%r before create new process", self, stacklevel=stacklevel)
         process = subprocess.Popen(  # noqa: S603
             command,
@@ -170,6 +174,7 @@ class Executor(Callback[P, T], Generic[P, T]):
 
     def _init_process(
         self,
+        command: list[str],
         input_file: Path | anyio.Path,
         output_file: Path | anyio.Path,
         init_file: Path | anyio.Path | None,
@@ -196,7 +201,9 @@ class Executor(Callback[P, T], Generic[P, T]):
             self._create_executor_args, input_file, output_file, init_file
         )
         terminator = Terminator(executor_args_builder, self.callbacks)
-        process = self._create_process(input_file, init_file, stacklevel=stacklevel + 1)
+        process = self._create_process(
+            command, input_file, init_file, stacklevel=stacklevel + 1
+        )
         result: AsyncResult[P, T] = AsyncResult(process, terminator.executor_args)
         terminator.callback_args = CallbackArgs(process=process, result=result)
         terminator.start()
@@ -222,7 +229,8 @@ class Executor(Callback[P, T], Generic[P, T]):
                 file.write(init_args_as_bytes)
             logger.debug("%r after write init file", self)
 
-        return self._init_process(input_file, output_file, init_file)
+        command = self._command(stacklevel=2)
+        return self._init_process(command, input_file, output_file, init_file)
 
     async def delay(self, *args: P.args, **kwargs: P.kwargs) -> AsyncResult[P, T]:
         """run function with deadline"""
@@ -248,7 +256,12 @@ class Executor(Callback[P, T], Generic[P, T]):
                 await file.write(init_args_as_bytes)
             logger.debug("%r after write init file", self)
 
-        return self._init_process(input_file, output_file, init_file)
+        try:
+            command = await self._command_async(stacklevel=2)
+        except NotImplementedError:
+            command = self._command(stacklevel=2)
+
+        return self._init_process(command, input_file, output_file, init_file)
 
     @override
     def __repr__(self) -> str:
@@ -328,9 +341,17 @@ class JinjaExecutor(Executor[P, T], Generic[P, T]):
         logger.debug("%r command: %s", self, command, stacklevel=stacklevel)
         return shlex.split(command)
 
-    def _render_jinja_subprocess(self) -> str:
-        import jinja2
+    @override
+    async def _command_async(self, stacklevel: int = 2) -> list[str]:
+        j2_script = await self._render_async_jinja_subprocess()
+        self._j2_script = Path(tempfile.gettempdir()) / str(uuid4())
+        async with await anyio.Path(self._j2_script).open("w+") as file:
+            await file.write(j2_script)
+        command = f"{sys.executable} {self._j2_script}"
+        logger.debug("%r command: %s", self, command, stacklevel=stacklevel)
+        return shlex.split(command)
 
+    def _prepare_func_code(self) -> tuple[str, str, str, str]:
         if self._initializer is None:
             init_func_code = "    def empty_initializer(): pass"
             init_func_name = "empty_initializer"
@@ -338,9 +359,33 @@ class JinjaExecutor(Executor[P, T], Generic[P, T]):
             init_func_code, init_func_name = parse_func_code(self._initializer.function)
         func_code, func_name = parse_func_code(self._func)
         func_code = textwrap.indent(func_code, "    ")
+
+        return init_func_code, init_func_name, func_code, func_name
+
+    def _render_jinja_subprocess(self) -> str:
+        import jinja2
+
+        init_func_code, init_func_name, func_code, func_name = self._prepare_func_code()
         with Path(__file__).with_name("subprocess_jinja.py").open("r") as file:
             source = file.read()
         return jinja2.Template(source).render(
+            func_code=func_code,
+            func_name=func_name,
+            init_func_code=init_func_code,
+            init_func_name=init_func_name,
+        )
+
+    async def _render_async_jinja_subprocess(self) -> str:
+        import jinja2
+
+        init_func_code, init_func_name, func_code, func_name = self._prepare_func_code()
+        async with (
+            await anyio.Path(__file__)
+            .with_name("subprocess_jinja.py")
+            .open("r") as file
+        ):
+            source = await file.read()
+        return await jinja2.Template(source, enable_async=True).render_async(
             func_code=func_code,
             func_name=func_name,
             init_func_code=init_func_code,
