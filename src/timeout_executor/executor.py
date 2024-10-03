@@ -5,6 +5,7 @@ import shlex
 import subprocess
 import sys
 import tempfile
+import textwrap
 from collections import deque
 from contextlib import suppress
 from functools import partial
@@ -45,6 +46,7 @@ P = ParamSpec("P")
 T = TypeVar("T", infer_variance=True)
 P2 = ParamSpec("P2")
 T2 = TypeVar("T2", infer_variance=True)
+_RM_DECORATORS: frozenset[str] = frozenset(["staticmethod", "lru_cache", "cache"])
 
 
 class Executor(Callback[P, T], Generic[P, T]):
@@ -335,6 +337,7 @@ class JinjaExecutor(Executor[P, T], Generic[P, T]):
         else:
             init_func_code, init_func_name = parse_func_code(self._initializer.function)
         func_code, func_name = parse_func_code(self._func)
+        func_code = textwrap.indent(func_code, "    ")
         with Path(__file__).with_name("subprocess_jinja.py").open("r") as file:
             source = file.read()
         return jinja2.Template(source).render(
@@ -467,10 +470,34 @@ def is_class(obj: Any) -> bool:
 
 def parse_func_code(func: Callable[..., Any]) -> tuple[str, str]:
     import inspect
-    import textwrap
 
     source = inspect.getsource(func)
     source = textwrap.dedent(source)
-    source = textwrap.indent(source, "    ")
+    source = remove_decorators(source)
 
     return source, func.__name__
+
+
+def remove_decorators(source: str) -> str:
+    import ast
+
+    module = ast.parse(source)
+
+    for node in module.body:
+        if not isinstance(node, ast.FunctionDef):
+            continue
+
+        decorators = [
+            decorator
+            for decorator in node.decorator_list
+            if (
+                not isinstance(decorator, ast.Name)
+                or decorator.id not in _RM_DECORATORS
+            )
+        ]
+        if len(decorators) == node.decorator_list:
+            continue
+
+        node.decorator_list = decorators
+
+    return ast.unparse(module)
