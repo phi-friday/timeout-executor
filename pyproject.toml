@@ -26,7 +26,6 @@ dependencies = [
     "tblib>=3.0.0",
     "exceptiongroup; python_version < '3.11'",
     "psutil",
-    "jinja2>=3.1.4",
 ]
 
 [project.urls]
@@ -34,6 +33,7 @@ Repository = "https://github.com/phi-friday/timeout-executor"
 
 [project.optional-dependencies]
 uvloop = ["uvloop; platform_system != 'Windows'"]
+jinja = ["jinja2>=3.0.0"]
 test = [
     "httpx>=0.27.2",
     "pytest-cov>=5.0.0",
@@ -50,7 +50,7 @@ dev-dependencies = [
     "pre-commit>=3.5.0",
     "pyyaml>=6.0.1",
     "poethepoet>=0.27.0",
-    "timeout-executor[uvloop,test]",
+    "timeout-executor[uvloop,jinja,test]",
 ]
 
 [tool.poe.tasks]
