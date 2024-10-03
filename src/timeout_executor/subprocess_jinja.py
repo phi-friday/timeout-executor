@@ -31,13 +31,13 @@ def run_in_subprocess() -> None:
     if init_file:
         with Path(init_file).open("rb") as file_io:
             _, init_args, init_kwargs = cloudpickle.load(file_io)
-        init_func(*init_args, **init_kwargs)
+        init_func(*init_args, **init_kwargs)  # type: ignore  # noqa: F821
 
     input_file = Path(environ.get(TIMEOUT_EXECUTOR_INPUT_FILE, ""))
     with input_file.open("rb") as file_io:
         _, args, kwargs, output_file = cloudpickle.load(file_io)
 
-    new_func = output_to_file(output_file)(func)
+    new_func = output_to_file(output_file)(func)  # type: ignore # noqa: F821
     new_func(*args, **kwargs)
 
 
@@ -92,8 +92,11 @@ def wrap_function_as_sync(func: Callable[P, Any]) -> Callable[P, Any]:
 
     return wrapped
 
+
 ###
 
+python = str
+text: python = """
 def init_func(*args: Any, **kwargs: Any) -> None:
 {{ init_func_code }}
     {{ init_func_name }}(*args, **kwargs)
@@ -101,6 +104,8 @@ def init_func(*args: Any, **kwargs: Any) -> None:
 def func(*args: Any, **kwargs: Any) -> Any:
 {{ func_code }}
     return {{ func_name }}(*args, **kwargs)
+"""
+exec(text)  # noqa: S102
 
 if __name__ == "__main__":
     run_in_subprocess()

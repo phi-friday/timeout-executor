@@ -335,7 +335,7 @@ class JinjaExecutor(Executor[P, T], Generic[P, T]):
         else:
             init_func_code, init_func_name = parse_func_code(self._initializer.function)
         func_code, func_name = parse_func_code(self._func)
-        with Path(__file__).with_name("subprocess_jinja.py.j2").open("r") as file:
+        with Path(__file__).with_name("subprocess_jinja.py").open("r") as file:
             source = file.read()
         return jinja2.Template(source).render(
             func_code=func_code,
