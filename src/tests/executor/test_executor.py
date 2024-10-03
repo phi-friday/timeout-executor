@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 import os
-import time
 import uuid
 from collections.abc import Awaitable
 from itertools import product
 from typing import Any
 
-import anyio
 import pytest
 
 from tests.executor.base import BaseExecutorTest
@@ -19,7 +17,9 @@ pytestmark = pytest.mark.anyio
 
 
 class TestExecutorSync(BaseExecutorTest):
-    @pytest.mark.parametrize(("x", "y"), product(range(TEST_SIZE), range(TEST_SIZE)))
+    @pytest.mark.parametrize(
+        ("x", "y"), list(product(range(TEST_SIZE), range(TEST_SIZE)))
+    )
     def test_apply_args(self, x: int, y: int):
         result = self.executor(1).apply(self.sample_func, x, y)
         assert isinstance(result, AsyncResult)
@@ -30,7 +30,9 @@ class TestExecutorSync(BaseExecutorTest):
         assert isinstance(result[0], tuple)
         assert result[0] == (x, y)
 
-    @pytest.mark.parametrize(("x", "y"), product(range(TEST_SIZE), range(TEST_SIZE)))
+    @pytest.mark.parametrize(
+        ("x", "y"), list(product(range(TEST_SIZE), range(TEST_SIZE)))
+    )
     def test_apply_kwargs(self, *, x: int, y: int):
         result = self.executor(1).apply(self.sample_func, x=x, y=y)
         assert isinstance(result, AsyncResult)
@@ -42,12 +44,20 @@ class TestExecutorSync(BaseExecutorTest):
         assert result[1] == {"x": x, "y": y}
 
     def test_apply_timeout(self):
-        result = self.executor(1).apply(time.sleep, 1.5)
+        def sleep(x: float) -> None:
+            import time
+
+            time.sleep(x)
+
+        result = self.executor(1).apply(sleep, 1.5)
         assert isinstance(result, AsyncResult)
         pytest.raises(TimeoutError, result.result)
 
     @pytest.mark.parametrize("x", range(TEST_SIZE))
-    def test_apply_lambda(self, x: int):
+    def test_apply_lambda_with_local_variable(self, x: int):
+        if self.use_jinja:
+            pytest.skip("JinjaExecutor does not support lambda.")
+
         result = self.executor(1).apply(lambda: x)
         assert isinstance(result, AsyncResult)
         result = result.result()
@@ -56,6 +66,9 @@ class TestExecutorSync(BaseExecutorTest):
 
     @pytest.mark.parametrize("x", range(TEST_SIZE))
     def test_apply_lambda_error(self, x: int):
+        if self.use_jinja:
+            pytest.skip("JinjaExecutor does not support lambda.")
+
         def temp_func(x: int) -> None:
             raise RuntimeError(x)
 
@@ -66,6 +79,8 @@ class TestExecutorSync(BaseExecutorTest):
 
     def test_terminator(self):
         def temp_func() -> None:
+            import time
+
             time.sleep(1)
 
         result = self.executor(0.5).apply(temp_func)
@@ -75,6 +90,9 @@ class TestExecutorSync(BaseExecutorTest):
         assert result._terminator.is_active is True  # noqa: SLF001
 
     def test_awaitable_non_coroutine(self):
+        if self.use_jinja:
+            pytest.skip("TODO: not yet tested with JinjaExecutor")
+
         expect = "done"
 
         def awaitable_func() -> Awaitable[Any]:
@@ -88,7 +106,9 @@ class TestExecutorSync(BaseExecutorTest):
 
 
 class TestExecutorAsync(BaseExecutorTest):
-    @pytest.mark.parametrize(("x", "y"), product(range(TEST_SIZE), range(TEST_SIZE)))
+    @pytest.mark.parametrize(
+        ("x", "y"), list(product(range(TEST_SIZE), range(TEST_SIZE)))
+    )
     async def test_apply_args(self, x: int, y: int):
         result = await self.executor(1).delay(self.sample_async_func, x, y)
         assert isinstance(result, AsyncResult)
@@ -99,7 +119,9 @@ class TestExecutorAsync(BaseExecutorTest):
         assert isinstance(result[0], tuple)
         assert result[0] == (x, y)
 
-    @pytest.mark.parametrize(("x", "y"), product(range(TEST_SIZE), range(TEST_SIZE)))
+    @pytest.mark.parametrize(
+        ("x", "y"), list(product(range(TEST_SIZE), range(TEST_SIZE)))
+    )
     async def test_apply_kwargs(self, *, x: int, y: int):
         result = await self.executor(1).delay(self.sample_async_func, x=x, y=y)
         assert isinstance(result, AsyncResult)
@@ -111,17 +133,24 @@ class TestExecutorAsync(BaseExecutorTest):
         assert result[1] == {"x": x, "y": y}
 
     async def test_apply_timeout(self):
-        result = await self.executor(1).delay(anyio.sleep, 1.5)
+        async def sleep(x: float) -> None:
+            import anyio
+
+            await anyio.sleep(x)
+
+        result = await self.executor(1).delay(sleep, 1.5)
         with pytest.raises(TimeoutError):
             await result.delay(0.1)
 
     @pytest.mark.parametrize("x", range(TEST_SIZE))
     async def test_apply_lambda(self, x: int):
-        async def lambdalike() -> int:
+        async def lambdalike(x: int) -> int:
+            import anyio
+
             await anyio.sleep(0.1)
             return x
 
-        result = await self.executor(1).delay(lambdalike)
+        result = await self.executor(1).delay(lambdalike, x)
         assert isinstance(result, AsyncResult)
         result = await result.delay()
         assert isinstance(result, int)
@@ -129,6 +158,8 @@ class TestExecutorAsync(BaseExecutorTest):
 
     async def test_apply_lambda_error(self):
         async def lambdalike() -> int:
+            import anyio
+
             await anyio.sleep(10)
             raise RuntimeError("error")
 
@@ -138,6 +169,8 @@ class TestExecutorAsync(BaseExecutorTest):
 
     async def test_terminator(self):
         async def temp_func() -> None:
+            import anyio
+
             await anyio.sleep(1)
 
         result = await self.executor(0.5).delay(temp_func)
@@ -148,6 +181,9 @@ class TestExecutorAsync(BaseExecutorTest):
         assert result._terminator.is_active is True  # noqa: SLF001
 
     async def test_awaitable_non_coroutine(self):
+        if self.use_jinja:
+            pytest.skip("TODO: not yet tested with JinjaExecutor")
+
         expect = "done"
 
         def awaitable_func() -> Awaitable[Any]:
@@ -158,6 +194,14 @@ class TestExecutorAsync(BaseExecutorTest):
         result = await result.delay()
         assert isinstance(result, str)
         assert result == expect
+
+
+class TestJinjaExecutorSync(TestExecutorSync):
+    use_jinja = True
+
+
+class TestJinjaExecutorAsync(TestExecutorAsync):
+    use_jinja = True
 
 
 def test_environment_variable():

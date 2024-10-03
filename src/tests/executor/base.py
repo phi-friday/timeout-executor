@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable
-from typing import Any
+from typing import Any, ClassVar
 
 import anyio
 
@@ -20,9 +20,15 @@ class SomeAwaitable:
 
 
 class BaseExecutorTest:
-    @staticmethod
-    def executor(timeout: float) -> TimeoutExecutor[Any]:
-        return TimeoutExecutor(timeout)
+    use_jinja: ClassVar[bool] = False
+
+    @classmethod
+    def executor(
+        cls, timeout: float, *, use_jinja: bool | None = None
+    ) -> TimeoutExecutor[Any]:
+        return TimeoutExecutor(
+            timeout, use_jinja=cls.use_jinja if use_jinja is None else use_jinja
+        )
 
     @staticmethod
     def awaitable(size: int = 5, value: Any = None) -> Awaitable[Any]:
@@ -40,4 +46,4 @@ class BaseExecutorTest:
     ) -> tuple[tuple[Any, ...], dict[str, Any]]:
         await anyio.sleep(0.1)
 
-        return BaseExecutorTest.sample_func(*args, **kwargs)
+        return args, kwargs
