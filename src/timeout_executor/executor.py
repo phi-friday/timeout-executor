@@ -532,7 +532,7 @@ def remove_decorators(source: str) -> str:
     module = ast.parse(source)
 
     for node in module.body:
-        if not isinstance(node, ast.FunctionDef):
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             continue
 
         decorators = [
