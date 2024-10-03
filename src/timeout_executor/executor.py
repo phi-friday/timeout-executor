@@ -514,6 +514,9 @@ def is_class(obj: Any) -> bool:
 
 
 def parse_func_code(func: Callable[..., Any]) -> tuple[str, str]:
+    if func.__name__ == "<lambda>":
+        raise ValueError("lambda function is not supported")
+
     import inspect
 
     source = inspect.getsource(func)
