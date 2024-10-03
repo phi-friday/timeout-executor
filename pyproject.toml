@@ -84,4 +84,8 @@ exclude_lines = [
 ]
 
 [tool.coverage.run]
-omit = ["./src/timeout_executor/subprocess.py", "./src/tests/**/*"]
+omit = [
+    "./src/timeout_executor/subprocess.py",
+    "./src/timeout_executor/subprocess_jinja.py",
+    "./src/tests/**/*",
+]
