@@ -11,6 +11,8 @@
 $ pip install timeout_executor
 # or
 $ pip install "timeout_executor[uvloop]"
+# or
+$ pip install "timeout_executor[jinja]"
 ```
 
 ## how to use
