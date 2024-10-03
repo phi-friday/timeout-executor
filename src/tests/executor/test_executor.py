@@ -199,6 +199,11 @@ class TestExecutorAsync(BaseExecutorTest):
 class TestJinjaExecutorSync(TestExecutorSync):
     use_jinja = True
 
+    def test_lambda_error(self):
+        lambda_func = lambda: 123  # noqa: E731
+        with pytest.raises(ValueError, match="lambda function is not supported"):
+            self.executor(1).apply(lambda_func)
+
 
 class TestJinjaExecutorAsync(TestExecutorAsync):
     use_jinja = True
