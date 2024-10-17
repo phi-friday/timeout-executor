@@ -33,7 +33,7 @@ dependencies = [
 Repository = "https://github.com/phi-friday/timeout-executor"
 
 [project.optional-dependencies]
-uvloop = ["uvloop; platform_system != 'Windows' and python_version != '3.13'"]
+uvloop = ["uvloop; platform_system != 'Windows'"]
 jinja = ["jinja2>=3.0.0"]
 test = [
     "httpx>=0.27.2",
