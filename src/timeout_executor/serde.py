@@ -17,7 +17,7 @@ from typing_extensions import TypeAlias
 if TYPE_CHECKING:
     SerializedTraceback: TypeAlias = dict[str, Any]
 
-__all__ = ["dumps_error", "loads_error", "serialize_error", "deserialize_error"]
+__all__ = ["deserialize_error", "dumps_error", "loads_error", "serialize_error"]
 
 _DATACLASS_FROZEN_KWARGS: dict[str, bool] = {"frozen": True}
 if sys.version_info >= (3, 10):  # pragma: no cover

@@ -33,7 +33,7 @@ SENTINEL = object()
 class AsyncResult(Callback[P, T], Generic[P, T]):
     """async result container"""
 
-    __slots__ = ("_process", "_executor_args", "_result")
+    __slots__ = ("_executor_args", "_process", "_result")
 
     _result: Any
 

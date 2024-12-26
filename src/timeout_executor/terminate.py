@@ -30,12 +30,12 @@ class Terminator(Callback[P, T], Generic[P, T]):
     """
 
     __slots__ = (
-        "_is_active",
-        "_executor_args",
-        "_init_callbacks",
-        "_callbacks",
         "_callback_args",
         "_callback_thread",
+        "_callbacks",
+        "_executor_args",
+        "_init_callbacks",
+        "_is_active",
         "_terminator_thread",
     )
 

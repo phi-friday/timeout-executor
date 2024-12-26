@@ -51,13 +51,13 @@ _RM_DECORATORS: frozenset[str] = frozenset(["staticmethod", "lru_cache", "cache"
 
 class Executor(Callback[P, T], Generic[P, T]):
     __slots__ = (
-        "_timeout",
+        "_callbacks",
         "_func",
         "_func_name",
-        "_unique_id",
         "_init_callbacks",
-        "_callbacks",
         "_initializer",
+        "_timeout",
+        "_unique_id",
     )
 
     def __init__(

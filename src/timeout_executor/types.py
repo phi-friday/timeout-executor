@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from timeout_executor.terminate import Terminator
 
 
-__all__ = ["ExecutorArgs", "CallbackArgs", "ProcessCallback", "Callback"]
+__all__ = ["Callback", "CallbackArgs", "ExecutorArgs", "ProcessCallback"]
 
 _DATACLASS_FROZEN_KWARGS: dict[str, bool] = {"frozen": True}
 _DATACLASS_NON_FROZEN_KWARGS: dict[str, bool] = {}

@@ -6,7 +6,7 @@ from timeout_executor.executor import apply_func, delay_func
 from timeout_executor.main import TimeoutExecutor
 from timeout_executor.result import AsyncResult
 
-__all__ = ["TimeoutExecutor", "AsyncResult", "apply_func", "delay_func"]
+__all__ = ["AsyncResult", "TimeoutExecutor", "apply_func", "delay_func"]
 
 __version__: str
 

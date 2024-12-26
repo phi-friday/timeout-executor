@@ -25,7 +25,7 @@ AnyT = TypeVar("AnyT", infer_variance=True, default=Any)
 class TimeoutExecutor(Callback[Any, AnyT], Generic[AnyT]):
     """timeout executor"""
 
-    __slots__ = ("_timeout", "_callbacks", "initializer", "_use_jinja")
+    __slots__ = ("_callbacks", "_timeout", "_use_jinja", "initializer")
 
     def __init__(self, timeout: float, *, use_jinja: bool = False) -> None:
         self._timeout = timeout
