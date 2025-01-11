@@ -11,7 +11,7 @@ from anyio.lowlevel import checkpoint
 from async_wrapper import async_to_sync, sync_to_async
 from typing_extensions import ParamSpec, Self, TypeVar, override
 
-from timeout_executor.logging import logger
+from timeout_executor.log import logger
 from timeout_executor.serde import SerializedError, loads_error
 from timeout_executor.types import Callback, ProcessCallback
 

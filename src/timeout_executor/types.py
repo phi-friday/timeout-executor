@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations  # noqa: A005
 
 import sys
 from abc import ABC, abstractmethod
@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Callable, Generic
 
 from typing_extensions import ParamSpec, TypeVar
 
-from timeout_executor.logging import logger
+from timeout_executor.log import logger
 
 if sys.version_info < (3, 11):  # pragma: no cover
     from exceptiongroup import ExceptionGroup

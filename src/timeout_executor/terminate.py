@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any, Callable, Generic
 from psutil import pid_exists
 from typing_extensions import ParamSpec, Self, TypeVar, override
 
-from timeout_executor.logging import logger
+from timeout_executor.log import logger
 from timeout_executor.types import Callback, CallbackArgs, ExecutorArgs, ProcessCallback
 
 if TYPE_CHECKING:

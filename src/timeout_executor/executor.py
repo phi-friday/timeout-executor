@@ -24,7 +24,7 @@ from timeout_executor.const import (
     TIMEOUT_EXECUTOR_INIT_FILE,
     TIMEOUT_EXECUTOR_INPUT_FILE,
 )
-from timeout_executor.logging import logger
+from timeout_executor.log import logger
 from timeout_executor.result import AsyncResult
 from timeout_executor.terminate import Terminator
 from timeout_executor.types import (
@@ -366,7 +366,7 @@ class JinjaExecutor(Executor[P, T], Generic[P, T]):
         import jinja2
 
         init_func_code, init_func_name, func_code, func_name = self._prepare_func_code()
-        with Path(__file__).with_name("subprocess_jinja.py").open("r") as file:
+        with Path(__file__).with_name("process_jinja.py").open("r") as file:
             source = file.read()
         return jinja2.Template(source).render(
             func_code=func_code,
@@ -380,9 +380,7 @@ class JinjaExecutor(Executor[P, T], Generic[P, T]):
 
         init_func_code, init_func_name, func_code, func_name = self._prepare_func_code()
         async with (
-            await anyio.Path(__file__)
-            .with_name("subprocess_jinja.py")
-            .open("r") as file
+            await anyio.Path(__file__).with_name("process_jinja.py").open("r") as file
         ):
             source = await file.read()
         return await jinja2.Template(source, enable_async=True).render_async(
