@@ -21,7 +21,7 @@ class TestExecutorSync(BaseExecutorTest):
 
     def test_wait_timeout(self):
         def func() -> None:
-            import time
+            import time  # noqa: PLC0415
 
             time.sleep(10)
 
@@ -44,7 +44,7 @@ class TestExecutorAsync(BaseExecutorTest):
 
     async def test_wait_timeout(self):
         async def func() -> None:
-            import anyio
+            import anyio  # noqa: PLC0415
 
             await anyio.sleep(10)
 

@@ -43,7 +43,7 @@ def run_in_subprocess() -> None:
 
 def dumps_value(value: Any) -> bytes:
     if isinstance(value, BaseException):
-        from timeout_executor.serde import dumps_error
+        from timeout_executor.serde import dumps_error  # noqa: PLC0415
 
         return dumps_error(value)
     return cloudpickle.dumps(value)

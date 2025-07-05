@@ -51,12 +51,12 @@ def test_unset_init_func(key, value):
 
 
 def sample_init(key: str, *, value: str) -> None:
-    import os
+    import os  # noqa: PLC0415
 
     os.environ[key.upper()] = value
 
 
 def get_init_if_exist(key: str) -> str:
-    import os
+    import os  # noqa: PLC0415
 
     return os.environ.get(key.upper(), "")

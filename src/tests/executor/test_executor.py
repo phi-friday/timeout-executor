@@ -45,7 +45,7 @@ class TestExecutorSync(BaseExecutorTest):
 
     def test_apply_timeout(self):
         def sleep(x: float) -> None:
-            import time
+            import time  # noqa: PLC0415
 
             time.sleep(x)
 
@@ -79,7 +79,7 @@ class TestExecutorSync(BaseExecutorTest):
 
     def test_terminator(self):
         def temp_func() -> None:
-            import time
+            import time  # noqa: PLC0415
 
             time.sleep(1)
 
@@ -134,7 +134,7 @@ class TestExecutorAsync(BaseExecutorTest):
 
     async def test_apply_timeout(self):
         async def sleep(x: float) -> None:
-            import anyio
+            import anyio  # noqa: PLC0415
 
             await anyio.sleep(x)
 
@@ -145,7 +145,7 @@ class TestExecutorAsync(BaseExecutorTest):
     @pytest.mark.parametrize("x", range(TEST_SIZE))
     async def test_apply_lambda(self, x: int):
         async def lambdalike(x: int) -> int:
-            import anyio
+            import anyio  # noqa: PLC0415
 
             await anyio.sleep(0.1)
             return x
@@ -158,7 +158,7 @@ class TestExecutorAsync(BaseExecutorTest):
 
     async def test_apply_lambda_error(self):
         async def lambdalike() -> int:
-            import anyio
+            import anyio  # noqa: PLC0415
 
             await anyio.sleep(10)
             raise RuntimeError("error")
@@ -169,7 +169,7 @@ class TestExecutorAsync(BaseExecutorTest):
 
     async def test_terminator(self):
         async def temp_func() -> None:
-            import anyio
+            import anyio  # noqa: PLC0415
 
             await anyio.sleep(1)
 
@@ -214,7 +214,7 @@ def test_environment_variable():
     os.environ[key] = value
 
     def func() -> bool:
-        import os
+        import os  # noqa: PLC0415
 
         return os.environ.get(key) == value
 

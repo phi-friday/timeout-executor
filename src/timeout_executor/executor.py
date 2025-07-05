@@ -363,7 +363,7 @@ class JinjaExecutor(Executor[P, T], Generic[P, T]):
         return init_func_code, init_func_name, func_code, func_name
 
     def _render_jinja_subprocess(self) -> str:
-        import jinja2
+        import jinja2  # noqa: PLC0415
 
         init_func_code, init_func_name, func_code, func_name = self._prepare_func_code()
         with Path(__file__).with_name("process_jinja.py").open("r") as file:
@@ -376,7 +376,7 @@ class JinjaExecutor(Executor[P, T], Generic[P, T]):
         )
 
     async def _render_async_jinja_subprocess(self) -> str:
-        import jinja2
+        import jinja2  # noqa: PLC0415
 
         init_func_code, init_func_name, func_code, func_name = self._prepare_func_code()
         async with (
@@ -515,7 +515,7 @@ def parse_func_code(func: Callable[..., Any]) -> tuple[str, str]:
     if func.__name__ == "<lambda>":
         raise ValueError("lambda function is not supported")
 
-    import inspect
+    import inspect  # noqa: PLC0415
 
     source = inspect.getsource(func)
     source = textwrap.dedent(source)
@@ -525,7 +525,7 @@ def parse_func_code(func: Callable[..., Any]) -> tuple[str, str]:
 
 
 def remove_decorators(source: str) -> str:
-    import ast
+    import ast  # noqa: PLC0415
 
     module = ast.parse(source)
 
